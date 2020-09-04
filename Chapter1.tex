@@ -1,0 +1,731 @@
+\documentclass[12pt,mythesisstyle]{report}
+%\usepackage{bbm}
+
+\usepackage{amssymb,amsmath}
+\usepackage{calc}
+\usepackage{verbatim}
+\usepackage{enumitem}
+\usepackage{comment}
+
+%\usepackage[mathscr]{eucal}
+%\usepackage{pstricks}
+\usepackage{latexsym,amsfonts}
+\usepackage{graphicx,graphics}% allows for graphics
+\usepackage{float} % floats the figures
+\usepackage{listings}
+\usepackage{amssymb}
+\usepackage{bm}
+\usepackage{breqn}
+
+
+% Title Page
+\title{}
+\author{}
+
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+My research focuses on the developement of Monte Carlo methods for phylogenetic inference of DNA sequences, in particular on the developement of Sequential Monte Carlo (SMC) algorithms for online onference of the spread of diseases. In this thesis I will explain the work on phylogenetic inference, and the results I have had after developing statistical algorithms using a software package named BEAST (the acronym stands for Bayesian Evolutionary Analysis by Sampling Trees). I will explain the benefits and limitations of several Monte Carlo methods, starting from Importance Sampling (IS) , to the Annealed Importance Sampling (AIS) and finally Sequential Monte Carlo (SMC), showing that the latter presents greater efficacy in complex problems.
+\end{abstract}
+
+\section{Introduction}\label{section:Introduction}
+
+\section{Notation}\label{section: notation}
+In the following chapters, unless otherwise stated, we will use the symbols as follow:
+\begin{itemize}
+	\item the capital letters, for example $P$, for probability distributions
+	\item the lowercase letters $p$, $g$ for probability density functions
+	
+	\begin{comment}
+	\item the lowercase letters with an hat symbol, for example $\hat{p}$, for normalised quantities
+	\end{comment}
+	
+	\item $\theta$ and $x$ to indicate the random variables to estimate
+	\item $y$ for the observations
+\end{itemize}
+ 
+
+\section{Bayesian Statistics}\label{section:bayesIntro}
+Given a \textbf{probability space} $\big(\Omega, \mathcal{F}, P\big)$, a \textbf{random variable} $X$ is a measurable function $X: \Omega \rightarrow E$, with $E$ a measurable space, s.t. the probability of $X(\omega) \in S \subseteq E\text{, }\omega \in \Omega $, is given by $P\big(X^{-1}(S)\big)$. Bayes rule allows the expression of conditional probability of random variables. If we consider two random variables, A and B, we express their joint probability, as follows
+\begin{equation}\label{bayesformulaGeneral}
+P(A\cap B)=P(A|B)P(B)
+\end{equation}
+From \eqref{bayesformulaGeneral}, and using the obvious equivalence $P(A\cap B)=P(B\cap A)$, we can express the conditional probability of A given B as the product of the probability of A times the probability of B given A, as follows
+\begin{equation}\label{bayesformula}
+P(A|B)=P(B|A)P(B)
+\end{equation}
+
+Stated in the terms of statistical modelling, the problem we are interested in is defining the distribution of some parameters of a model that we want to estimate
+\begin{equation}\label{thetaparam}
+\theta=\big[\theta_1, \theta_2,...,\theta_D\big]^T
+\end{equation}
+given a set of observations 
+\begin{equation}\label{yobservation}
+y=\big[y_1, y_2,...,y_N\big]^T
+\end{equation}
+and in this context we express the formula \eqref{bayesformula} as
+\begin{equation}\label{bayescoicontrocazzi}
+p(\theta | y)=\frac{p(y|\theta)p(\theta)}{p(y)}=\frac{p(y|\theta)p(\theta)}{\int p(y|\theta)p(\theta)d\theta}
+\end{equation}
+in equation \eqref{bayescoicontrocazzi}, we define:
+\begin{itemize}
+	\item \textbf{marginal likelihood} the term p(y) in the denominator
+	\item \textbf{posterior} the term $p(\theta | y)$ on the left hand side of the equation
+	\item \textbf{prior} the term $p(\theta)$
+	\item \textbf{likelihood} the term $p(y|\theta)$
+\end{itemize}
+The prior can be considered as the a-priori information we have on the distribution of the parameters, the likelihood is the information that allows us to update the model after the data $y$ that we observe.
+
+
+\section{The Monte Carlo method}\label{section: monteCarloMethods}
+In Bayesian statistics we often have the need to calculate expectations with respect to the posterior density $p(\theta | y)$ defined in \eqref{bayescoicontrocazzi}, and there are cases where  $p(\theta | y)$  cannot be computed in closed form, and might also be computationally non-tractable with traditional numerical integration methods (that suffer from the so-called \textit{curse of dimensionality} as the dimension of the state space increases and the convergence rate can become exponentially worse \cite{curseOfDimensionality}), and therefore we might not be able to evaluate the quantity
+\begin{equation}\label{expectationposterior}
+E_{p(\theta | y)}(f(\theta))=\int f(\theta)p(\theta | y)d\theta=\mu
+\end{equation} 
+We will, in this section, explain the foundations of \textbf{Monte Carlo methods} \cite{montecarlomethodsbib} \cite{RobertCasella}. If we are able to draw N independent samples $\theta_1,\theta_2...\theta_N$ from $p(\theta | y)$, we can consider the approximation
+\begin{equation}\label{approximatedmean}
+\hat{\mu}=\frac{1}{N}\sum_{i=1}^{N}f(\theta_i)
+\end{equation}
+The quantity $\hat{\mu}$ of \eqref{approximatedmean} approximates the expectation
+\begin{equation}\label{approximatedmeanapprox}
+\frac{1}{N}\sum_{i=1}^{N}f(\theta_i)\approx \int f(\theta)p(\theta | y)d\theta
+\end{equation}
+The left-hand-side sum of equation \eqref{approximatedmeanapprox} equals the right-hand-side integral almost surely in the limit $N \xrightarrow{}\infty$ by the \textbf{strong law of large numbers} (note that in the left-hand-side the $p(\theta | y)$ is implicitly approximated by the random measure since we are drawing the $\theta_i$ samples from it). We will explore in the following sections of this chapter how to deal with cases when we are not able to draw the samples $\theta_1,\theta_2...\theta_N$ directly from the posterior distribution $p(\theta | y)$, and we will see how to write an approximation conceptually similar to equation \eqref{approximatedmean}.
+By simple application of the linearity of the expectation we have that the estimator \eqref{approximatedmean} is unbiased, i.e. that
+\begin{equation}\label{unbiased_p}
+E_{p(\theta | y)}(\hat{\mu})=E_{p(\theta | y)}(f)
+\end{equation}
+ and that the variance of the estimator is given by
+\begin{equation}
+var(\hat{\mu})=var(\frac{1}{N}\sum_{i=1}^{N}f(\theta_i))=\frac{\sigma^2}{N}
+\end{equation}
+assuming that the variance of $f$
+\begin{equation}
+\sigma^2=E_{p(\theta | y)}(f(\theta)^2)-\mu
+\end{equation}
+be finite.
+
+
+\section{Importance Sampling}\label{section:IS}
+\begin{comment}
+LEO: FROM PAGE 6 OF AIS PAPER FROM RASHFORD U CAN TAKE THE ESTIMATE OF THE RATIO OF THE NORMALISING CONSTANTS, JUST TAKE THE REFERENCE TO THE PAPER AND CITE THE RESULT
+\end{comment}
+Importance sampling (IS) provides a way to estimate integrals by the use of an instrumental auxiliary distribution. In detail, let's assume that we want to calculate the expectation of a function $f$ according to the density $p$, assumed to be $0$ outside $\mathbf{D} \subseteq \mathbb{R}^n$
+\begin{equation}\label{expectationis}
+E_{p}(f(\theta))=\int_{\mathbf{D}} f(\theta) p(\theta) dx=\mu
+\end{equation}
+we may want to approximate the integral via use of the sum as in equation \eqref{approximatedmean}, but let's assume we cannot draw easily samples from the distribution $p$. We can use an auxiliary distribution, defined \textbf{proposal distribution}, $g$, easier to draw from: it is sufficient that $g(\theta)>0$,  $\forall \theta \in \mathbf{Q}$, where $\mathbf{Q}=\{\theta | f(\theta)p(\theta)\neq 0\}$. The validity of the process is shown by the equivalences below \cite{OwenIS}
+\begin{equation}\label{equationISweights}
+\begin{aligned}
+E_{g}(\frac{f(\theta)p(\theta)}{g(\Theta)})=\int_{\mathbf{Q}} \frac{f(\theta)p(\theta)}{g(\theta)}g(\theta) d\theta=\int_{\mathbf{Q}} f(\theta)p(\theta) d\theta \\
+=\int_{\mathbf{D}} f(\theta)p(\theta) d\theta + \int_{\mathbf{D}^c \cap \mathbf{Q}} f(\theta)p(\theta) d\theta -
+\int_{\mathbf{Q}^c \cap \mathbf{D}} f(\theta)p(\theta) d\theta=\mu
+\end{aligned}
+\end{equation}
+The last equality comes from $p(\theta)=0 \text{ in } \mathbf{D}^c$ and $f(\theta)=0 \text{ in } \mathbf{Q}^c$.
+Therefore the importance sampling estimate becomes
+\begin{equation}\label{approximatedmeanIS}
+\hat{\mu}=\frac{1}{N}\sum_{i=1}^{N}\frac{p(\theta_{i})}{g(\theta_{i})}f(\theta_{i}) =\frac{1}{N}\sum_{i=1}^{N}w(\theta_{i})f(\theta_{i}) \text{, } \theta \sim g
+\end{equation}
+Where, in equation \eqref{approximatedmeanIS}, the so-called weights are defined as follows
+\begin{equation}\label{weightseqn_f_on_g}
+w(\theta)=\frac{p(\theta)}{g(\theta)}
+\end{equation}
+The weights $w$ correct for the fact that we are sampling from the proposal distribution, $g$, instead of $p$.
+Therefore, we can sample $\theta_1,\theta_2,...,\theta_N$ independently from the proposal distribution g, and due to the LLN (as in formula \eqref{approximatedmean}) we have
+\begin{equation}\label{approximatedmeanIS2}
+\hat{\mu}=\frac{1}{N}\sum_{i=1}^{N}w(\theta_{i})f(\theta_{i}) \xrightarrow[N \to \infty]{a.s.} E_{p}(f(\theta))
+\end{equation}
+Similarly to equation \eqref{unbiased_p} (see also \cite{mcmcnotes} and \cite{OwenIS}), it is easy to demonstrate that $\mu$ of equation \eqref{approximatedmeanIS} is an unbiased estimator of the mean, i.e. that
+\begin{equation}
+E_g(\hat{\mu})=\mu
+\end{equation}
+and that \cite{OwenIS}
+\begin{equation}\label{varianceIS}
+Var_g(\hat{\mu})=\frac{\sigma^2}{N}
+\end{equation}
+where
+\begin{equation}\label{sigmasqIS}
+\sigma^2=\int_{\mathbf{Q}}\frac{\big(f(\theta)p(\theta)\big)^2}{g(\theta)}d\theta-\mu^2=\int_{\mathbf{Q}}\frac{\big(f(\theta)p(\theta)-\mu g(\theta)\big)^2}{g(\theta)}d\theta
+\end{equation}
+The formulae \eqref{sigmasqIS} give us a way to analyse an optimal proposal $g$: from the second expression in  \eqref{sigmasqIS} we see that an optimal proposal will minimise the numerator $(f(\theta)p(\theta)-\mu g(\theta))$, therefore a function $g$ proportional to $fp$, and ideally \cite{OwenIS}:
+\begin{equation}\label{eqn:idealproposaISabsval}
+g_{opt}=\frac{|f|p}{E_p(|f|)}
+\end{equation}
+although the $g_{opt}$ of equation \eqref{eqn:idealproposaISabsval} is not practically feasible because it would mean that we can sample directly from $p$ (which by assumption is not the case). It is therefore advisable in a good proposal choice that $g$ is proportional to $|f|p$ (for example it has spikes where $|f|p$ does) \cite{OwenIS}. We can also see from the second expression in \eqref{sigmasqIS} that small values of $g$ in the denominator would magnify whatever lack of proportionality in the numerator between $g$ and $|f|p$ \cite{OwenIS}, therefore we want a proposal that has heavier tails than $p$ (or at least as heavy as $p$) \cite{mcmcnotes}. 
+
+\subsection{Estimating the normalization constant through IS}
+In Bayesian analysis we can usually only compute an un-normalised version of $p$, or $g$ or both. For example, in the case of $p$, we may have $p=Z\hat{p}$, where $\hat{p}$ is the normalised distribution and $Z$ is the normalising constant. Let's assume without loss of generality that only $p$ is unnormalised, we have therefore that
+\begin{equation}\label{normalisingConst}
+\int_\Theta p d\theta=Z 
+\end{equation}
+We can use IS to estimate the normalising constant by considering that, from equation \eqref{normalisingConst}, we have
+\begin{equation}\label{estimateZ}
+E_{g}(w(\theta))=\int \frac{p(\theta)}{g(\theta)}g(\theta) d\theta= \int p(\theta) d\theta=Z
+\end{equation}
+Therefore using again formulas of \eqref{approximatedmeanIS} and \eqref{approximatedmeanIS2} applied to equation \eqref{estimateZ}, we have that
+\begin{equation}\label{approxZeqn}
+\hat{Z}=\frac{1}{N}\sum_{i=1}^{N}w_{i}
+\end{equation}
+The $\hat{Z}$ of equation \eqref{approxZeqn} is the estimate of the normalising constant $Z$ up to which we know the distribution $p$ (a similar procedure can be applied if $g$ is known up to a normalising constant). Using the result of \eqref{approxZeqn}, we can write a "self-normalised" version of the estimate of equations \eqref{approximatedmeanIS} and \eqref{approximatedmeanIS2}, as follows
+\begin{equation}\label{selfnormalizedmean}
+\hat{\mu}=\frac{\sum_{i=1}^{N}w(\theta_{i})f(\theta_{i})}{\sum_{i=1}^{N}w_{i}}
+\end{equation}
+The normalised weights of equation \eqref{selfnormalizedmean} are such that
+\begin{equation}\label{selfnormalizedweight}
+\hat{w}_{i}=\frac{w_{i}}{\sum_{j=1}^{N}w_{j}}
+\end{equation}
+Formula  \eqref{selfnormalizedmean} is the "self normalised" version of equations \eqref{approximatedmeanIS} and \eqref{approximatedmeanIS2}, with the property that the weights $\hat{w}^{i}$ of equation  \eqref{selfnormalizedmean} add up to 1 (as seen from \eqref{estimateZ} and \eqref{approxZeqn}, this means that we are simulating drawing from normalised distributions). It is not difficult to show that (see for example \cite{mcmcnotes}) 
+\begin{equation}\label{muselfnormalised}
+E_g(\hat{\mu})=\mu+\frac{\mu Var_g(w(\theta))−Cov_g(w(\theta),w(\theta)·f(\theta))}{N} +O(N^{−2})
+\end{equation}
+And that the variance is
+\begin{equation}
+Var_g(\hat{\mu})=\frac{Var_g(w(\theta)f(\theta)) − 2\mu Cov_g( w (\theta ) , w ( \theta ) · f (\theta ) )+\mu Var_g(w(\theta))}{N} +O(N^{−2})
+\end{equation}
+We can therefore see from \eqref{muselfnormalised} that $\hat{\mu}$ is biased, it has though the advantage that it can be calculated knowing the density up to a constant, in fact the normalising constant cancels out in the calculation (as shown in \cite{mcmcnotes}).
+
+\subsection{Measuring the performances of an IS estimator}
+As we have seen in the previous sections, the Importance Sampling method allows us to perform calculation of integrals, for example the expectation of a function $f$ w.r.t. a density $p$, like in equation \eqref{expectationis}, by using samples drawn from a proposal distribution $g$, with a sum like in equation \eqref{approximatedmeanIS}. An obvious question to ask is how does the IS approximation compare with the usual Monte Carlo approximation \cite{Kong1} \cite{Kong2} of the integral that we would have by drawing samples from the distribution $p$, as in \eqref{approximatedmean}. The remainder of this section will be dedicated to answering this question, using the logic outlined in \cite{RethinkingESS}.
+For ease, we rewrite here some definitions used in the previous sections, changing slightly the notation (to make it coherent with \cite{RethinkingESS}). We start from the integral of an expectation 
+\begin{equation}\label{rethinkingESSMean}
+I=E_p(f)=\int f(\theta)p(\theta) d\theta
+\end{equation}
+Then we call $\bar{I}$ the Monte Carlo approximation of \eqref{rethinkingESSMean}
+\begin{equation}\label{RethinkingbarI}
+\bar{I}=\frac{1}{N}\sum_{i=1}^{N}f(\theta_i)\text{, } \theta \sim p
+\end{equation}
+And we call $\tilde{I}$ the self normalised IS approximation of \eqref{rethinkingESSMean} (as in \eqref{selfnormalizedmean})
+\begin{equation}\label{rethinkingtildeI}
+\tilde{I}=\sum_{i=1}^{N}\bar{W}(\theta^{(i)})f(\theta^{(i)})\text{, } \theta \sim g
+\end{equation}
+Where, in equation \eqref{rethinkingtildeI}, $\bar{W}$ are the self-normalised weights of equation \eqref{selfnormalizedweight}.
+A measure that has been widely used \cite{OwenIS} \cite{RethinkingESS} to compare the performance of IS estimators, is the so-called \textbf{Effective Sample Size (ESS)}, which compares the variances of the traditional Monte Carlo estimate \eqref{RethinkingbarI} and the IS approximation \eqref{rethinkingtildeI}
+\begin{equation}\label{pureESS}
+ESS=N\frac{Var(\bar{I})}{Var(\tilde{I})}
+\end{equation}
+We can notice that the ESS of \eqref{pureESS} has some drawbacks, for example it depends on the integrand function $f$ (as clearly seen from \eqref{rethinkingESSMean} and \eqref{rethinkingtildeI}), and therefore an estimator that is good for an integrand function $f_1$ may not in general be good for another function $f_2$, and also in order to calculate \eqref{pureESS} we will need to compute integrals that are in general intractable as the integral \eqref{rethinkingESSMean} that we are trying to estimate (see for example \cite{RethinkingESS} for a detailed expression of such integrals). Therefore some simplifications have been used \cite{RethinkingESS} \cite{Kong2} that reduce significantly the complexity of \eqref{pureESS}, to:
+\begin{equation}\label{zeroApproxESS}
+ESS \approx \frac{N}{1+Var_g(W)}
+\end{equation}
+We see from equation \eqref{zeroApproxESS} that, in the ideal case where the weights are known exactly (and therefore with zero associated variance), we have $ESS=N$, i.e. we are in a situation that is as good as if we were drawing directly from the target distribution. As we see in \cite{RethinkingESS} \cite{Kong1} \cite{Kong2}, further simplification of \eqref{zeroApproxESS} bring to
+\begin{equation}\label{firstApproxESS}
+ESS \approx \frac{NZ^2}{E_g(\bar{W}^2)}
+\end{equation}
+Where Z is the normalising constant expressed in \eqref{normalisingConst}. It is to be noted that \eqref{firstApproxESS} has, as said, approximations and that these restrict the validity of \eqref{firstApproxESS} to cases where the approximations are valid \cite{Kong2} \cite{RethinkingESS} (for example since there is no more dependance on the integrand function $f$, it is assumed that the proposal $g$ is "reasonably" close to the optimal proposal \eqref{eqn:idealproposaISabsval}). By using  particle approximations for $Z$ from \eqref{approxZeqn} and $E_g(\bar{W}^2) \approx \frac{1}{N}\sum_{j=i}^{N}{(w^{(j)})^2}$ which brings us to the final approximation of ESS in the version widely used in literature:
+\begin{equation}\label{finalESS}
+\hat{ESS}=N\frac{(\sum_{j=i}^{N}w^{(j)})^2}{\sum_{j=i}^{N}(w^{(j)})^2}=\frac{1}{\sum_{j=i}^{N}(\bar{w}^{(j)})^2}
+\end{equation}
+Where, in \eqref{finalESS}, in the first equation the $w^{(j)}$ are unnormalised weights of equation \eqref{weightseqn_f_on_g}, whereas in the second equation the $\bar{w}^{(j)}$ are the self-normalised weights of equation \eqref{selfnormalizedweight}.
+
+\section{Markov Chain Monte Carlo (MCMC)}\label{section: mcmc}
+\begin{comment}
+LEO: IN THIS INTRODUCTORY PART PUT ALL TH STEPS TO SHOW THAT THE MCMC CONVERGES TO F: WE WANT TO DRAW SAMPLES FROM F AND WE'LL DO WITH KERNEL AND PROPOSAL
+LEO: PUT IN THE BEGINNING WHAT URE GOING TO DO: WELL DEMONSTRATE HOW TO THIS AND THAT, AND THAT SAMPLES ARE TAKEN ETC ETC
+LEO: RENAME PI AS F AND POSSIBLY THE X AS THETA
+LEO : UNCERTAINTY OF THE MCMC
+LEO: FROM SLIDE 27 GANDY TAKE ERGODICITY OF MH
+\end{comment}
+We will introduce in this section Markov Chains Monte Carlo (MCMC). Like the Monte Carlo methods in previous sections, MCMC provides an indirect way to approximate drawing samples from a distribution that we cannot directly draw from. Unlike the traditional MC and Importance Sampling, MCMC samples are not independently distributed: as we can see from equation \eqref{markovianity} in fact, there is conditional dependence between values. A stochastic process is defined Markov Chain Monte Carlo if, considering $X_1, X_2, ...X_N$ random variables defined on a common probability space $\big(\chi, \mathcal{A}, P\big)$, that are the realization of the process, it has the following so-called Markov property:
+\begin{equation}\label{markovianity}
+P(X^{(t)}=x^{(t)}|X^{(t-1)}=x^{(t-1)},...,X^{(1)}=x^{(1)})=P(X^{(t)}=x^{(t)}|X^{(t-1)}=x^{(t-1)})
+\end{equation}
+As we can see from  \eqref{markovianity}, the value of the chain at a particular time $t$ is only dependent from the value at time $t-1$. In the following parts of this section we will outline the basic concepts that will help us introduce MCMC \cite{RobertCasella}.
+
+\subsection{Markov Kernel}\label{section:Markovkernels}
+Considering two measurable spaces $\big(\chi, A\big)$, $\big(Y, B\big)$ a transition kernel is a map \cite{RobertCasella}  $K:\chi \times B\rightarrow [0,1]$, s.t.
+
+\begin{comment}
+LEO: DEFINE THE PROBABILITY MEASURE P SOMEWHERE
+\end{comment}
+
+\begin{itemize}\label{MArkovKernel}
+	\item $\forall x \in \chi$, $k(x,\cdot)$ is a probability measure
+	\item $\forall B_i \in B$, $k(\cdot, B_i)$ is measurable
+\end{itemize}
+The kernel is a conditional probability density, we will speak more extensively about the associated probability measure in the next subsections. In the continuous case we have that
+\begin{equation}\label{MarkovKernelContinuous}
+P(X_t \in B_i|X_{t-1}=x_{t-1})=\int_{B_i}k(x_{t-1},x_t)dx_t
+\end{equation}
+whereas in the discrete case we have
+\begin{equation}\label{MarkovKernelDiscrete}
+P(X_t \in B_i|X_{t-1}=x_{t-1}) = \sum_{x'\in B_i} k(x_{t-1},x')
+\end{equation}
+
+\subsection{Initial distribution of the chain}\label{subsectionX0distrib}
+The chain $X_n$ is defined for $n \in \mathbb{N}$, therefore there is a $X_0$, starting point of the chain. We define the initial distribution of $X_0$ as $\mu$
+\begin{equation}\label{distribX0}
+P(X_0 \in A)=\int_A \mu(x) dx
+\end{equation}
+And, consequently
+\begin{equation}
+P(X_0=x_0)=\mu(x_0)
+\end{equation}
+The extension to the discrete case of \eqref{distribX0} is similar to formula \eqref{MarkovKernelDiscrete}, we have in fact
+\begin{equation}\label{distribX0discrete}
+P(X_0 \in A)=\sum_{x_{0i} \in A } \mu(x_{0i}) 
+\end{equation}
+
+
+\subsection{Joint and conditional distributions of the $X_i$}
+Continuing what we have said in the previous section \ref{subsectionX0distrib}, the marginal distribution of $X_1$ is obtained by  $\mu_1(x_1)=\mu(x_0)k(x_0,x_1)$, and consequently \cite{RobertCasella} 
+\begin{equation}
+P(X_1 \in A|X_0=x_0)=\int_A \mu(x_0)k(x_0,x_1) dx_1
+\end{equation}
+and, finally
+\begin{equation}
+P(X_1 \in A_1, X_0 \in A_0)=\int_{A_0} \int_{A_1} \mu(x_0)k(x_0,x_1) dx_0dx_1
+\end{equation}
+By using the Markovian property \eqref{markovianity} and the definition of the kernel we have that \cite{mcmcnotes}
+\begin{equation}\label{generalMCMCfinalControcazzi} 
+P(X_0=x_0,...X_n=x_n)= \\
+\mu(x_0)\prod_{j=1}^{n}k(x_{j-1},x_j)
+\end{equation}
+We also introduce the notation used in literature \cite{RobertCasella} \cite{mcmcnotes} $k^1(x,A)=k(x,A)$, and
+\begin{equation}\label{kernelN}
+k^s(x_t,x_{t+s})=\int_{A^{s-1}} \prod_{j=t+1}^{t+s} k(x_{j-1},x_j)dx_t...dx_{t+s-1}
+\end{equation}
+so we can express \eqref{generalMCMCfinalControcazzi} as
+\begin{equation}\label{generalMCMCfinalControcazziEconkenne}
+P(X_0=x_0,...X_n=x_n)= \\
+\mu(x_0)k^n(x_{0},x_n)
+\end{equation}
+
+\begin{comment}
+\subsection{Irreducibility, recurrence and Harris-recurrence}
+We firstly introduce the concepts of $\textit{stopping time}$ and $\textit{number of passages}$. The quantity $\tau_A$ is called stopping time \cite{RobertCasella} when it denotes the first $t$ for which the chain $X_t$ enters the set A:
+\begin{equation}\label{stoppingTimeMCMC}
+\tau_A=inf\bigl\{t\geq1: X_t\in A \bigr\}
+\end{equation}
+Associated with every set $A$ we also have the number of passages of the chain in $A$
+\begin{equation}\label{nrOFPassagesMCMC}
+n_A=\sum_{t=0}^{\infty} \mathbb{I}_A(X_t)
+\end{equation}
+Now we introduce the concept of \textbf{irreducibility}, which is a measure of the sensitivity of the Markov Chain to the initial condition $X_0$ and the initial distribution $\mu$. Given a measure $\phi$, we say that the chain $X_n$ is $\pi$-irreducible if any subset $A$ of the state space can be reached from the chain starting anywhere, in mathematical terms it means that the stopping time of the chain in any set $A$ is finite, starting from any $X_0$, therefore \textbf{irreducibility} is defined as follows:
+\begin{equation}\label{irreducibility}
+P(\tau_A<\infty | X_0)>0 \text{, }\forall X_0 \in \chi\text{, }\forall A \subseteq \chi\text{ s.t. }\pi(A)>0
+\end{equation}
+The chain $X_n$ is \textbf{recurrent} if there is a measure $\pi$ s.t. $X_n$ is $\pi$-irreducible, and for any starting point $X_0$, for any set $A$, the chain will return to the set A an infinite number of times (on the other hand, if the set is reached a finite number of time the chain is defined \textit{transient}). In mathematical terms, considering equation \eqref{nrOFPassagesMCMC}, \textbf{recurrence} is defined as follows:
+\begin{equation}\label{recurrence}
+E(\eta_A)=+\infty\text{, }\forall X_0 \in \chi\text{, }\forall A \subseteq \chi\text{ s.t. }\pi(A)>0
+\end{equation}
+\textbf{Harris-recurrence} is a stronger recurrence condition than \eqref{recurrence}: if there is a measure $\pi$ s.t. $X_n$ is $\pi$-irreducible, the chain $X_n$ is \textbf{Harris-recurrent} if:
+\begin{equation}\label{Harrisrecurrence}
+P(\eta_A=+\infty)=1\text{, }\forall X_0 \in \chi\text{, }\forall A \subseteq \chi\text{ s.t. }\pi(A)>0
+\end{equation}
+Harris recurrence expressed in \eqref{Harrisrecurrence} is a stronger condition than simple recurrence of \eqref{recurrence}, it is possible to find examples, for example see \cite{RobertCasella}, where \eqref{recurrence} is satisfied but \eqref{Harrisrecurrence} is not.
+\end{comment}
+
+\subsection{Stationary property of the MCMC and invariant distribution}\label{section: InvariantDistribMCMC}
+We will in this section introduce the concept of \textbf{stationary/invariant distribution} of the chain, i.e. a distribution $\pi$ s.t. \cite{RobertCasella}:
+\begin{equation}\label{ergodic}
+X_{n} \sim \pi \rightarrow X_{n+1} \sim \pi
+\end{equation}
+A $\sigma$-finite measure $\pi$ is invariant for the kernel $k(\cdot,\cdot)$ and the chain $X_N$ if
+\begin{equation}\label{mcmcinvariant}
+\pi(A)=\int_{\chi} k(x,A)\pi(x)dx
+\end{equation}
+Equation \eqref{mcmcinvariant} states the condition \eqref{ergodic} (if the invariant distribution is a probability measure it is also called \textit{stationary} due to \eqref{ergodic}). A theorem states \cite{RobertCasella} that if $X_N$ is a \textbf{recurrent} chain then it has an invariant $\sigma$-finite measure which is unique up to a constant (\textit{recurrence} is a property that states that, whatever the initial condition of the chain, we will end up in a set $A$ having positive measure an infinite number of time as $N\rightarrow \infty$ \cite{RobertCasella}). The stationary property of the MCMC can also be related to another property, that states that states that the direction of time does not matter in the dynamic of the chain, $P_{X_{n+1}}(X_{n+1}|X_n=x)=P_{X_{n}}(X_{n}|X_{n+1}=x)$. This property is called \textbf{reversibility} and is stated as follows \cite{mcmcnotes} \cite{RobertCasella}:
+\begin{equation}\label{reversibilityMCMC}
+k(x,y)f(x)=k(y,x)f(y)
+\end{equation} 
+Equation \eqref{reversibilityMCMC} is named \textit{detailed balance condition} and provides a sufficient condition for $f$ to be a stationary distribution for the chain. It is easy to prove that \cite{RobertCasella} if a transition kernel $k$ satisfies the condition \eqref{reversibilityMCMC}, with $\pi$ a probability density function then $\pi$ is the invariant density of the chain.
+
+\subsection{Convergence of the MCMC}
+We are interested in understanding if and towards what the chain $X_n$ is converging. We have seen in section \ref{section: InvariantDistribMCMC} the conditions for existence of a stationary distribution for MCMC, in this section we will state the conditions for such stationary distribution to be the limiting distribution of the chain. We will, in this section, state the two convergence theorems of the chain to the stationary distribution: the \textbf{convergence by LLN} and, under stronger conditions, the \textbf{convergence in total variation norm}.
+
+\subsubsection{Convergence by LLN}
+Under the following conditions \cite{RobertCasella}: \textit{if the chain is Harris-recurrent, with invariant measure $\pi$, then the following convergence theorem can be proved} 
+\begin{equation}\label{LLN_MCMC}
+\lim_{n\to\infty} \frac{1}{n} \sum f(X_i)=\pi(f)\text{, }\forall X_0\text{, a.s. by LLN}
+\end{equation}
+(\textit{Harris-recurrence} is a stronger property than that of recurrence mentioned earlier in the section, the main concept anyway remains that whatever the initial condition of the chain, we will end up in a set $A$ having positive measure an infinite number of time as $N\rightarrow \infty$ \cite{RobertCasella}). Formula \eqref{LLN_MCMC} states that, given the conditions stated, no matter the initial condition $X_0$, the chain will converge by Law of Large Numbers to the stationary distribution $\pi$, for all $\pi$-integrable functions.
+
+\subsubsection{Ergodicity and convergence in total variation norm}
+We start by defining an additional property of the chain which will be auxiliary in the formulation of the convergence. We define \textbf{periodic} a chain $X_n$ which cyclically returns in the same states, mathematically, $X_n$ is periodic with period $d$ if there are non empty disjoint sets $A_0...A_{d-1}$ s.t.
+\begin{equation}\label{periodicityMCMC}
+K(x,A_j)=1 \text{, for } j=i+1 \text{(mod d)} \text{, } \forall i \text{ s.t. } x \in A_i
+\end{equation}
+If the conditions of \eqref{periodicityMCMC} are not met, then $X_n$ is aperiodic.
+We can now state the following conditions of convergence \cite{RobertCasella}: \textit{if the chain is Harris-recurrent, aperiodic with invariant measure $\pi$, then there is convergence of the chain to the stationary distribution $\pi$, whatever the initial distribution $\mu$}:
+\begin{equation}\label{ergodicity}
+\lim_{n\to\infty} \bigg|\bigg|\int_{A} k^n(x,\cdot)\mu(x) -\pi \bigg|\bigg|_{TV}
+\end{equation}
+Where $k^n$ is the transition kernel applied $n$ times introduced in \eqref{generalMCMCfinalControcazziEconkenne}, and the\textit{ total variation norm }is
+\begin{equation}\label{totalVariationNormMCMC}
+\big|\big| \mu_1(A)-\mu_2(A)\big|\big|_{TV}=sup_A |\mu_1(A) - \mu_2(A)|
+\end{equation}
+Formula \eqref{ergodicity} states \textbf{ergodicity}.
+
+\subsection{Metropolis-Hastings algorithm}\label{section:MetropolisHastings}
+We now need a way to take advantage of the properties of the chain outlined in the previous sections, and build chains that converge to a stationary distribution of our choice: the \textbf{Metropolis-Hastings algorithm} \cite{Metropolis} \cite{Hastings} has been built with this purpose. Suppose we want to draw samples from a target distribution $\pi$ and we want to do so via a MCMC. The algorithm allows us to approximate drawing samples from an arbitrary distribution $p$. We build the transition kernel $k$ in three steps in the following way:
+\begin{enumerate}
+	\item draw samples from the proposal $g$: $X^*_n \sim g(X^*|X_n)$
+	\item calculate the \textit{acceptance ratio}  $\alpha(X^*_n|X_n)=\frac{p(X^*_n)g(X_n|X^*_n)}{p(X_n)g(X^*_n|X_n)}$
+	\item we draw from the uniform distribution $u \sim \text{Unif}[0,1]$, if $u\leq\alpha$ we have $X_{n+1}=X^*_{n+1}$, otherwise $X_{n+1}=X_n$
+\end{enumerate}
+The kernel $k$ built with the three-step procedure outlined above can be synthesised as follows:
+\begin{equation}\label{kernelMH}
+k(x_{n+1}, x_{n})=\alpha(x^*_{n+1} | x_n)g(x^*_{n+1} | x_n)+\mathbf{1}_{\bigl\{x^*_{n+1}=x_n\bigr\}}\bigg[1 - \int \alpha (s | x_n)g(s|x_n)ds\bigg]
+\end{equation}
+It can be demonstrated \cite{mcmcnotes} \cite {RobertCasella} that the kernel \eqref{kernelMH} satisfies the reversibility condition \eqref{reversibilityMCMC} and therefore, as explained in section \ref{section: InvariantDistribMCMC}, $p$ is the invariant distribution of the chain.
+
+\section{Annealed Importance Sampling (AIS)}\label{section: AIS}
+\begin{comment}
+LEO: IN THE BEGINNING IT IS COPIED FROM THE AIS PAPER, CHANGE IT IN STEADY STATE
+\end{comment}
+The \textbf{Annealed importance Sampling (AIS)} algorithm can be seen as an enhancement \cite{annealedis} to the Importance Sampling and MCMC tecniques introduced in sections \ref{section:IS} and \ref{section: mcmc}. In particular, as we will see later on in the section, Annealed Importance Sampling allows us to move from an initial tractable distribution to a target distribution of interest, which is intractable or difficult to draw from.  AIS is most useful in cases of isolated modes, it works better, in general, that IS because for importance sampling to work well the variance of the weights should not vary too much, and, in case of isolated modes, some of the samples can different modes, which will be assigned different weights and the variation in weights due to this will be large if some important modes are found only rarely. AIS will also in general work better than MCMC in case of isolated modes, in fact when MCMC is used to sample from complex distributions it must usually proceed by making only small changes to the state variables \cite{annealedis}, and this causes the chain to move between modes only rarely, and so to take a long time to reach equilibrium, and will exhibit high autocorrelations for functions of the state variables out to long time lags. The AIS is a heuristic for avoiding to this problem, allowing to  gradually approach the desired the distribution of interest by making use of interpolating distributions.
+We proceed with the description of the method. The aim of the algorithm of AIS \cite{annealedis} is, as all other Monte Carlo methods, to approximate the drawing of samples from a target distribution of interest, let's call this normalised target distribution $p_n$, and $f_n$ the associated un-normalised version (in the rest of the section we will use either or both $p$ and $f$ with indexes e.g. $p_j$ and $f_j$ for normalised and un-normalised distributions). AIS makes use of the methods of IS and MCMC, in fact it will use intermediate proposal distributions to draw from, and will make use of MCMC to move between the intermediate steps. The algorithm starts by sampling from an initial proposal distribution that we call $f_0$ (or a said $p_0$), often a candidate for this proposal is the prior \cite{annealedis}. As said, the AIS moves from the initial distribution to the target $f_n$ with intermediate target distributions $f_j$
+\begin{equation}\label{fjAIS}
+f_j(x)=f_n(x)^{\beta(j)} f_0(x)^{1-{\beta(j)}}, \;\;\; j=1,2,..N, \;\;\; 0\leq\beta(j)\leq1
+\end{equation}
+We start the algorithm with $\beta(j)=0$ and therefore with $f_0$ and we arrive in the last step to the target $f_n$ with $\beta(j)=1$. In the particular case where we use the prior as starting distribution, expressing the posterior $f_n$ as prior times likelihood as in the standard Bayesian set-up \eqref{bayescoicontrocazzi} we have:
+\begin{equation}\label{f0explained}
+f_n(x)=f_0(x)l(x)
+\end{equation}
+where, in \eqref{f0explained}, $f_0$ is the prior, and $l$ is the likelihood. In this case, using equation \eqref{f0explained} in \eqref{fjAIS}, we have that
+\begin{equation}\label{fjsimplified}
+f_j(x)=f_n(x)l(x)^{\beta(j)}, \;\;\; j=1,2,..N, \;\;\; 0\leq\beta(j)\leq1
+\end{equation}
+If we indicate with $p_i$ the normalized probability distribution associated with each $f_i$, the algorithm, as described in section 2 of \cite{annealedis}, is as follows
+\begin{equation}\label{AISalgorithmSteps}
+\begin{aligned}
+\text{step 0)}  \text{ }x_{0}\sim p_{0} \\
+\text{step 1)} \text{ MCMC to move from } p_0 \text{ to } p_1\text{, }x_{1}\sim p_{1}\\
+\text{step 2)}  \text{ MCMC to move from } p_1 \text{ to } p_2\text{, }x_{2}\sim p_{2}\\
+... \\
+\text{step n)} \text{ MCMC to move from } p_{n-1} \text{ to } p_n\text{, }x_{n}\sim p_{n} \\
+\end{aligned}
+\end{equation}
+Where, in \eqref{AISalgorithmSteps}, the MCMC moves of the intermediate steps are performed, as explained in section \ref{section:Markovkernels}, using Markov kernels $k_i(x_{i-1},x_i)$ (for example with Metropolis-Hastings \ref{section:MetropolisHastings}). Explaining the algorithm more in detail: 
+\begin{enumerate}\addtocounter{enumi}{-1}
+	\item in step 0 we draw $x_{0}$ from the starting proposal distribution, by assumption easy to draw from, for example the prior $p_{0}$
+	\item in step 1 we apply a Markov kernel $k(x_0,x_1)$ with target $p_1$ of \eqref{fjAIS}, that allows us to move in the state space and, using the results seen in the MCMC section \ref{section: mcmc}, this means that we approximate drawing $x_1$ from the distribution $p_1$
+	\item similarly to what we did in the previous step, we move towards $p_2$ and we approximate drawing $x_2$ from the distribution $p_2$
+\end{enumerate}
+\begin{enumerate}[label=...]
+	\item ...
+\end{enumerate}
+
+\begin{enumerate}[label=n.]
+	\item in the last step we approximate drawing a sample $x_n$ from the target density $p_n$
+\end{enumerate}
+The algorithm \eqref{AISalgorithmSteps} produces samples $x_n^{\\(i\\)} \text{, i=1,2,...}$ that are drawn from the target distribution $p_n$, with approximations that we will discuss in the remainder of the section. Like Importance Sampling, each particle $x_n^{\\(i\\)}$ has a weight that accounts for the fact that we are not directly drawing from the target distribution $p_n$, we will see that the expression of the weight of each particle is as follows (please note that the super index $i$ indicating the particle has been omitted for brevity in the following formula for the $f_j$ and, in addition, we are using $f_j$ instead of $p_j$, this is possible because it can be shown \cite{annealedis} that normalising constants cancel out in ratios): 
+\begin{equation}\label{AISweights}
+w^{(i)}=\frac{f_{1}(x_{0})}{f_{0}(x_{0})}\frac{f_{2}(x_{1})}{f_{1}(x_{1})}\text{...}\frac{f_{n}(x_{n})}{f_{n-1}(x_{n})}
+\end{equation}
+Before explaining how it is obtained mathematically, we can see from its expression that \eqref{AISweights} is made up by products of importance weights: each factor $\frac{f_{j+1}(x_{j})}{f_{j}(x_{j})}$ is, as seen in \eqref{weightseqn_f_on_g}, the ratio of the target over the proposal, in fact each $f_j$, by construction, is the proposal for the $f_{j+1}$, and these intermediate steps allow, compared to IS, a smoother transition from the proposal to the target, in fact, by tuning $\beta(j)$ of equation \eqref{fjAIS}, it is possible to have proposals that are closer to the targets, allowing for greater efficiency of the intermediate IS steps. The validity of \eqref{AISweights} can be shown \cite{annealedis} using the results we have already obtained in section \ref{section:IS} and \ref{section: mcmc}. In fact, if we consider an extended state space $(x_0, ... x_n)$, with a joint distribution:
+\begin{equation}\label{jointDistribAIS}
+f(x_0, ... x_n)=f_n(x_n)\tilde{k}_{n-1}(x_n,x_{n-1})...\tilde{k}_0(x_1,x_{0})
+\end{equation}
+We have that the marginal for $x_n$ of equation \eqref{jointDistribAIS} is the density we are looking to draw from (the target distribution). The $\tilde{k}_j$ are backward transition kernels associated to the MCMC moves of \eqref{AISalgorithmSteps}, and can be calculated by using the detailed balance condition of MCMC of \eqref{reversibilityMCMC}:
+\begin{equation}\label{detailedBalanceConditionAIS}
+\tilde{k}_{j}(x,x')=\frac{k_{j}(x',x)p(x')}{p(x)}
+\end{equation}
+By rewriting equation \eqref{jointDistribAIS} as
+\begin{equation}\label{jointDistribAISrewritten}
+\begin{aligned}
+f(x_0, ... x_n)=f_n(x_n)\frac{f_{n-1}(x_n)}{f_{n-1}(x_n)}\tilde{k}_{n-1}(x_n,x_{n-1})...\frac{f_{1}(x_0)}{f_{1}(x_0)}\tilde{k}_0(x_1,x_{0})=\\
+k_{n-1}(x_{n-1},x_n)\frac{f_n(x_n)}{f_{n-1}(x_n)}...k_0(x_0,x_{1})\frac{f_{1}(x_0)}{f_{0}(x_0)}f_1(x_1)
+\end{aligned}
+\end{equation}
+If we take a look at the proposal distribution $g$ of the procedure \eqref{AISalgorithmSteps}, starting from the first step $x_{0} \sim p_0$ and considering all the subsequent applications of Markov kernels $k(x_j,x_{j+1})$, it has the form:
+\begin{equation}\label{jointproposalDistribAIS}
+\begin{aligned}
+g(x_0, ... x_n)=f_0(x_0)k_{0}(x_{0},x_1)...k_{n-1}(x_{n-1},x_{n})
+\end{aligned}
+\end{equation}
+Therefore, the AIS can be see as a multi-step importance sampling, and the expression of the weight for the whole importance sampling process, as seen in \eqref{weightseqn_f_on_g}, is
+\begin{equation}\label{fullWeightsAIS}
+w^{(i)}=\frac{f(x_0, ... x_n)}{g(x_0, ... x_n)}=\frac{f_{1}(x_{0})}{f_{0}(x_{0})}\frac{f_{2}(x_{1})}{f_{1}(x_{1})}\text{...}\frac{f_{n}(x_{n})}{f_{n-1}(x_{n})}\end{equation}
+And \eqref{fullWeightsAIS} brings the result \eqref{AISweights}, which proves our case.
+Since, as we saw in the steps of \eqref{AISalgorithmSteps}, at each step $x_j \sim f_j$ and therefore the function $f_j$ becomes the proposal for the next step $f_{j+1}(x_j)$, all the rules that apply to importance sampling choice of proposal hold (please see section \ref{section:IS}). The choice of the proposal, as in importance sampling, is critical for the success of the algorithm, and we will see in the application to phylogenesis that in non-trivial cases smooth transitions between functions, i.e. small steps in the exponent $\beta$ of formula \eqref{fjAIS}, are needed to have an acceptable Effective Sample Size.
+
+
+\section{Sequential Monte Carlo (SMC)}\label{section: SMC}
+\begin{comment}
+LEO: NELLE DISTRIBUZIONI INVECE DI P CHIAMARLE \PI
+LEO: METTERE I RIFERIMENTI BIBL PER SMC
+\end{comment}
+The \textbf{Sequential Monte Carlo (SMC)} algorithm has many commonalities with the AIS seen in section \ref{section: AIS}, in fact we will make use of consecutive "neighbouring" distributions, i.e. distributions that are not too different one from another so that the proposals and the target distributions, at each step, are sufficiently close. The starting point is, as in the common Monte Carlo methods, that we are willing to draw samples from a target distribution $\pi_n$. We proceed through intermediate targets as in equation \eqref{fjAIS}, and at each step the previous target become the proposal for the next target. We proceed in steps, similar to \eqref{AISalgorithmSteps}, we start by drawing from an initial distribution $pi_0$ easy to draw from, it can for example be the prior (in which case the expressions simplify as in equations \eqref{f0explained} and \eqref{fjsimplified}), and we go on constructing the first steps as done in \eqref{AISalgorithmSteps}. We present here the SMC version that makes use of resampling of the particles, we will explain further in the section what this implies. The steps of the SMC algorithm follow:
+\begin{equation}\label{SMCalgorithmSteps1}
+\begin{aligned}
+\text{step 0)}  \text{ }x_{0}\sim p_{0} \\
+\text{step 1)} \text{ MCMC to move from } p_0 \text{ to } p_1\text{, }x_{1}\sim p_{1}\\
+\end{aligned}
+\end{equation}
+
+\begin{enumerate}\addtocounter{enumi}{-1}
+	\item we draw $x_{0}\sim p_{0}$ from the starting proposal distribution $p_{0}$ (for example we could choose the prior), by assumption easy to draw from, and set the weights initially to $w^{(i)}_0=\frac{1}{N}$
+	\item we use the drawn particles as an importance sampler proposal (see section \ref{section:IS}) for $p_1$ of equation \eqref{fjAIS}, and we have a weight update of $w^{(i)}_1=w^{(i)}_0\frac{p_1(x_0)}{p_0(x_0)}$, this update reflects the weight of particles after the drawing process
+	\item we normalise the weights $w^{(i)}_1$ and we resample the particles according to their weight, so the bigger the normalised weight the more the particle will have a chance to be chosen in this resampling process: this resampling step allows us to eliminate particles where the proposal weakly represent the posterior, and will replicate particles where there is a strong representation of the posterior, all particles after resampling will again have weights of $w^{(i)}_0=\frac{1}{N}$
+	\item we wish to use the points of the state space obtained from the previous drawing done in step 0, for the next step. To do so, we need to move in the state space, so we apply a Markov kernel $k_1(x_0,x_1)$ with target $p_1$ of \eqref{fjAIS}, that allows us to move from $x_0$ to $x_1$ in the state space and, using the results seen in the MCMC section \ref{section: mcmc}, this means that we approximate drawing the points $x_1$ from the distribution $p_1$. The actual distribution of the drawn points after the MCMC step, from the theory (see section \ref{section: mcmc}) is $\tilde{p}_1(x_1)=\int p_0(x_0)k_1(x_0,x_1)dx_1$, we update the weights with $w^{(i)}_1=w^{(i)}_0\frac{p_1(x_1)}{\tilde{p}_1(x_1)}$, and we have drawn $x_1 \sim k_1(x_0,\cdot)$
+\end{enumerate}
+we see, from the last step in the above procedure, that the weight update in the last step is
+\begin{equation}\label{weightUpdateSMC}
+w^{(i)}_1=w^{(i)}_0\frac{p_1(x_1)}{\int p_0(x_0)k_1(x_0,x_1)dx_0}
+\end{equation}
+Since it is not easy, in general, to calculate $\int p_0(x_0)k(x_0,x_1)dx_1$, we rewrite the fraction in the RHS of \eqref{weightUpdateSMC} so that it can be expressed in non-integral form; we do so by writing, for some $L(x_1,x_0)$
+\begin{equation}\label{nonIntegralSMC}
+p_1(x_1)=\int p_1(x_1)L_0(x_1,x_0)dx_0
+\end{equation}
+Where, in \eqref{nonIntegralSMC}, the $L(x_1,x_0)$ is a backward kernel, built so that $p_1(x_1)$ is the $x_1$-marginal of the joint distribution $p_1(x_1)L(x_1,x_0)$. Therefore, instead of marginalising, we write the contribution in the RHS of \eqref{weightUpdateSMC} using the joint distributions
+\begin{equation}\label{weightUpdateSMCNONINTEGRAL}
+w^{(i)}_1=w^{(i)}_0\frac{p_1(x_1)L_0(x_1,x_0)}{p_0(x_0)k_1(x_0,x_1)}
+\end{equation}
+Since we can choose $L_0(x_1,x_0)$ of \eqref{weightUpdateSMCNONINTEGRAL} at will (as long as equation \eqref{nonIntegralSMC} holds), we can choose $L$ s.t.
+\begin{equation}\label{goodChoiceOfBackwardKernelSMC}
+p_1(x_1)L_0(x_1,x_0)=p_1(x_0)k(x_0,x_1)
+\end{equation}
+and, substituting \eqref{goodChoiceOfBackwardKernelSMC} in equation \eqref{weightUpdateSMC} we have
+\begin{equation}\label{weightsFirstStepSMC}
+w^{(i)}_1=w^{(i)}_0\frac{p_1(x_0)}{p_0(x_0)}
+\end{equation}
+By repeating the steps outlined above, we can normalise the weights of \eqref{weightsFirstStepSMC} as in step 2, we resample, then we move in the state space from $x_1$ to $x_2$ using a Markov kernel $k_2(x_1,x_2)$ having $p_2$ of \eqref{fjAIS} as target, and, with a procedure similar to the one that has brought us from equation \eqref{weightUpdateSMC} to \eqref{weightsFirstStepSMC}, we have that
+\begin{equation}\label{weightsSecondStepSMC}
+w^{(i)}_2=w^{(i)}_1\frac{p_2(x_1)}{p_1(x_1)}
+\end{equation}
+
+\section{Models of genetic evolution}\label{section: models of genetic evolution}
+\begin{comment}
+LEO: E' COPIATO DAL PAPER WRIGHT FISHER EXPLANATION QUINDI CAMBIALO A LUNGO TEMRINE
+\end{comment}
+The main goal of population genetics and of phylogenesis (we explain the differences of the two in section \ref{section: genetics vs phylogenesis}) is to infer the past history of populations and describe the evolutionary forces that have shaped their genetic variations. The current section will give a very brief and schematic explanation of the forces behind evolution.
+\subsection{DNA}
+\textbf{DNA} is packaged into \textbf{chromosomes}. Taking as example the human species, there are 46 chromosomes situated in the cells nuclei, i.e. 23 pairs, one of each chromosome is inherited by the mother, the other by the father. \textbf{Genes} are section of the chromosome situated in so-called \textbf{loci}, each gene is responsible for a trait, for example hair colour. Different variations of the same gene are called \textbf{alleles}. The expression of different alleles of the same gene will result in different characteristics, for example a different colour of hair, say brown or blonde.
+
+\subsection{Population genetics vs phylogenesis}\label{section: genetics vs phylogenesis}
+As introduced at the beginning of this section \ref{section: models of genetic evolution}, the forces that shape genetic evolution can vary, and the resulting differences in the DNA may be due to, just to shortlist some  \cite{wrightexplained}:
+\begin{itemize}
+	\item \textbf{random drift} (change in frequency of combination of certain alleles in a population due to chance, resulting in change of frequency of specific traita in a population)
+	\item \textbf{mutations} (occasional errors in the replication of DNA)
+	\item \textbf{selection} (mutations that are more advantageous become more likely to be passed to the following generations)
+\end{itemize}
+\textbf{Population genetics} usually deals with timescales within a generation \cite{wrightexplained}, and data often consists of time series of allele frequencies, estimated from multiple DNA samples from the same generation, and the task is to estimate the changes of allele frequencies over time, this is done for example using the \textbf{Wright-Fisher model}, introduced in section \ref{section: wright-fisher}.
+\\*\textbf{Phylogenesis} usually considers timescales of multiple generations \cite{wrightexplained}, and data often consist of a single sample from each specie, and the task is generally to infer such parameters as divergence times of the species, populations size. Such task is accomplished for example by the \textbf{Coalescent model}, introduced in section \ref{section: coalescent}
+\\*Of course the above subdivision between population genetics and phylogenesis is to be taken as a reference and differences between the two can be blurred, for example in the cases where we consider data sets containing DNA sequences that comprise recently diverged species and we need to model both types of differences in the data: mutations that are still polymorphic (i.e. short timescale mutations where we still see expressions of all different alleles) and mutations that have been fixed as substitutions and have therefore a longer timescale\cite{wrightexplained}.
+
+\subsection{The Wright-Fisher model}\label{section: wright-fisher}
+The Wright–Fisher model \cite{wright1931} \cite{fisher} \cite{wrightexplained} accounts for the effects of the evolutionary forces on allele frequencies over time: random drift, mutation, selection. The model assumes a randomly mating population of finite constant size reproducing in discrete generations, by allowing the individuals in generation $r + 1$ to choose parents at random from the previous generation $r$. The model describes the stochastic behaviour through time of the frequency of an allele at a locus. We give here a short description of its most schematic version with a diploid (i.e. with two sets of chromosomes, one coming from each parent) \textbf{population of size $N$} which contains only two alleles, denoted $AA$ and $AB$, and only subject to \textit{random drift}. This is a reasonably good approximation for relatively short timescales.
+\subsubsection{Mathematical derivation with probability given by allele frequency \cite{wrightexplained}}
+The main concept of the model is related to allele frequency \cite{wrightexplained}. If we name $z(r)$
+ the number of individuals in a population at generation $r$ that have a specific allele, say the allele $AA$, then the frequency of the allele AA is
+ \begin{equation}\label{probWrightFisher}
+ x(r)=\frac{z(r)}{N}
+ \end{equation}
+The best guess on the number of alleles $z(r+1)$ in generation $r+1$ is based on the frequency of the allele in generation $r$, expressed in \eqref{probWrightFisher}, and is a binomial with population $N$ and probability $x(r)$, expressing the probability of having $z(r+1)$ successes
+\begin{equation}\label{binomialWrightFisher}
+z(r+1)|z(r) \sim Bin(N,x(r))
+\end{equation}
+And therefore, expressing \eqref{binomialWrightFisher} with $x(r)=\frac{z(r)}{N}$
+\begin{equation}\label{binomialWrightFisherFull}
+P([z(r+1)|z(r)]=k)=\binom{N}{k}\bigg(\frac{z(r)}{N}\bigg)^k\bigg(1-\frac{z(r)}{N}\bigg)^{N-k}
+\end{equation}
+By using the results for the binomial distribution, and remembering that $x(r)$ is proportional to $z(r)$ by the population size $N$, assumed to be constant, we have that mean and variance of the binomial \eqref{binomialWrightFisher} are as follows:
+\begin{equation}\label{firstMeanWrightFisher}
+E[x(r+1)|x(r)]=x(r)
+\end{equation}
+\begin{equation}\label{firstVarWrightFisher}
+Var[x(r+1)|x(r)]=\frac{1}{N}x(r)(1-x(r))
+\end{equation}
+We see that both equation \eqref{firstMeanWrightFisher} and \eqref{firstVarWrightFisher} depend on the frequency of the allele in the previous generation. By iterating the two expressions we have that \cite{wrightexplained}:
+\begin{equation}\label{meanWrightFisher}
+E[x(r+1)|x(0)]=x(0)
+\end{equation}
+\begin{equation}\label{varWrightFisher}
+Var[x(r+1)|x(0)]=x(0)(1-x(0))\bigg(1-\bigg(1-\frac{1}{N}\bigg)^r\bigg)
+\end{equation}
+And, for big $N$ we can use the approximation
+\begin{equation}\label{approxVarWrightFisher}
+Var[x(r+1)|x(0)]\approx x(0)(1-x(0))\bigg(1-\bigg(1-e^{-t}\bigg)
+\end{equation}
+with
+\begin{equation}\label{timeWrightFisher}
+t(r, N)=\frac{r}{N}
+\end{equation} 
+We can see from \eqref{timeWrightFisher} that we can estimate the population size $N$ only if the generation $r$ is known, otherwise we can only have an estimate of the combined $t(r,N)$ of \eqref{timeWrightFisher}, that we can name \textit{generation time}. We will see in the Coalescent method described in following sections that it is a common problem of population inference often to be able to estimate only a function of the number of generations and of the population size, not each of the two parameters separately, if no additional information is known \cite{wrightexplained} \cite{drummondestimatepopsize}.
+From equations \eqref{firstMeanWrightFisher} and \eqref{firstVarWrightFisher} we can see that there are two equilibria:
+\begin{enumerate}
+	\item $x(r)=0$, when in a generation we reach zero number of individuals with the specific allele, this causes the expected value for the following generations to be zero as well, with zero variance
+	\item $x(r)=N$, i.e. all the individuals have the allele, and in the future generations all individuals will have the allele as well, with zero variance
+\end{enumerate}
+The above conclusion brings us to say that, under the conditions of the model, if a certain alelle has small frequency, it is more likely to disappear after a few generations (it is more likely to reach the equilibrium $x(r+n)=0 \text{, for some n}$), whereas if it has a frequency close to 1 (nearly all the population has the allele), it is more likely to reach the equilibrium point $x(r+n)=N \text{, for some n}$, i.e. all the population will end up having the specific allele.
+
+\subsubsection{Mathematical derivation with probability given by the population size \cite{coalescentPrimer}}
+We report here also a slightly different mathematical derivation of the Wright-Fisher model \cite{coalescentPrimer}, as we will use some the results in the following section \ref{section: coalescent} on Coalescent theory. We consider here the probability of having a certain number of allele at generation $r+1$ distributed according to a binomial, as in equation \eqref{binomialWrightFisher}, but in this case instead of using the allele frequency of equation \eqref{probWrightFisher} as probability parameter of the binomial, we use
+\begin{equation}\label{probWrightFisherSimple}
+p=\frac{1}{N}
+\end{equation}
+Therefore, we write an equation similar to \eqref{binomialWrightFisher}, and, indicating with $z(r+1)$ the number of alleles in generation $r+1$ and using \eqref{probWrightFisherSimple} we say that
+\begin{equation}\label{binomialWrightFisherSimple}
+z(r+1) \sim Bin(N,p)
+\end{equation}
+Expressing \eqref{binomialWrightFisherSimple} 
+\begin{equation}\label{binomialWrightFisherFullSimple}
+P\big(z(r+1)=k\big)=\binom{N}{k}\bigg(\frac{1}{N}\bigg)^k\bigg(1-\frac{1}{N}\bigg)^{N-k}
+\end{equation}
+In the hypothesis of $N$ large $P\big(z(r+1)=k\big)$ of equation \eqref{binomialWrightFisherFullSimple} is almost Poisson distributed $z(r+1) \sim Po(1)$ and \cite{coalescentPrimer}
+\begin{equation}\label{WrightFisherPoisson}
+P\big(z(r+1) \approx \frac{e^{-1}}{k!}
+\end{equation}
+Using \eqref{WrightFisherPoisson}, we see that the probability that a particular allele has no expression in the next generation is
+\begin{equation}\label{WrightFisherPoissonAt0}
+P\big(z(r+1)=0\big) \approx e^{-1} \approx 0.37
+\end{equation}
+And therefore, from the result of \eqref{WrightFisherPoissonAt0}, the probability of expression of the allele is approximately
+\begin{equation}\label{WrightFisherPoissonAtNot0}
+P\big(z(r+1) \neq 0\big) \approx 1- e^{-1} \approx 0.63
+\end{equation}
+Extending the result of \eqref{WrightFisherPoissonAtNot0} at t generations in the future, considering the independence of the events, as per hypotheses of the Wright-Fisher model expressed at the beginning of section \ref{section: wright-fisher}, we see that
+\begin{equation}\label{WrightFisherPoissonAtfuture}
+P\big(z(r+t) \neq 0\big) \approx \big(1- e^{-1}\big)^t \approx \big(0.63\big)^t
+\end{equation}
+And so, under the hypotheses of the model, after a few generations only a few lineages contribute to the current population \cite{coalescentPrimer}, in fact, taking as an example a population size of $N=10000$, after $t=15$ generations, a number of approximately 10 lineages will have contributed to the current allele population
+\begin{equation}\label{exampleWrightFisher}
+10000\big(0.63\big)^{15} \approx 10
+\end{equation}
+The remaining $10000-10=9990$ lineages that, in the example were present $15$ generations ago, have not survived.
+
+\section{Standard Coalescent}\label{section: coalescent}
+From the simple version of the Wright-Fisher model described in the previous section \ref{section: wright-fisher}, where we introduced probabilities concerning different versions of a gene, we move on to the problem of estimating times of when gene variations happen, and from there to derive the \textit{Coalescent Model}, that describes the distribution of the times of the ancestors of different genes sampled from different individuals.
+
+\subsection{Coalescent of a sample of two different genes}\label{section: coalescenttwogenes}
+In the same setting of the Wright-Fisher model of section \ref{section: wright-fisher}, i.e. a constant population size of $N$, discrete generation and full mixing of individuals, we want to infer the distribution of the waiting time to the \textbf{Most Recent Common Ancestor} (\textbf{MRCA}) of two genes sampled in a population of $N$. Assuming that both genes are sampled at the same time $t=0$ we will be going backwards in the estimation of the time when they had a common ancestor. Considering discrete generations, the probability that two genes had the MRCA $j$ generations back is given by the probability that they don't have a common ancestor in the previous $j-1$ generations and they do have a common ancestor in the $j_{th}$ generation: since sampling in different generations is independent of each other, and given the probability $\frac{1}{N}$ that they have a common ancestor in any generation (and therefore $1-\frac{1}{N}$ that they don't), the time of MRCA is distributed as follows \cite{coalescentPrimer} :
+\begin{equation}\label{timeMRCA}
+Pr\big(T_{MRCA}=j\big)=\frac{1}{N}\big(1-\frac{1}{N}\big)^{j-1}
+\end{equation} 
+From equation \eqref{timeMRCA} we can see that the time to the common ancestor is geometrically distributed with parameter $\frac{1}{N}$. Equation \eqref{timeMRCA} is derived, under the same assumptions of the Wright-Fisher model, from equation \eqref{binomialWrightFisherSimple}: the geometric distribution of \eqref{timeMRCA} comes from the binomial \eqref{binomialWrightFisherSimple} where we focus on the number of "failures" (i.e. the number of generations where there is no coalescent event) until the first "success" (the coalescent event of two samples). Using the properties of the geometric distribution in \eqref{timeMRCA}, we can calculate the expected $T_{MRCA}$
+\begin{equation}\label{expectedTimeMRCA}
+E\big(T_{MRCA}\big)=\frac{1}{\frac{1}{N}}=N
+\end{equation} 
+We see, in equation \eqref{expectedTimeMRCA}, that a bigger population size $N$ means an equally bigger average time to the common ancestor.
+
+\subsection{Coalescent of a sample of k different genes}\label{section: coalescentngenes}
+We can further expand the expression for two different genes found in equation \eqref{timeMRCA}, to the general case of $k$ different genes in a population of $N$. Under the same conditions explained in the section \ref{section: coalescenttwogenes}, if, in starting generation at $t=0$, out of a population of $N$, $k \leq N$ individuals have different genes, the probability that in the previous generation they don't have a common ancestor is:
+\begin{equation}\label{noCommonAncestor}
+\begin{split}
+Pr\big(T_{MRCA}\neq 1\big)=\big(\frac{N-1}{N}\big)\big(\frac{N-2}{N}\big)...\big(\frac{N-k+1}{N}\big)= \\ 1-\frac{k\big(k-1)}{2N}+O(\frac{1}{N^2})
+\end{split}
+\end{equation}
+Please note in equation \eqref{noCommonAncestor}, as explained before, that times, in the Coalescent model are counted backwards, therefore $T_{MRCA}=1$ is one generation back. Since we assume that the population $N$ is significantly larger than $k$, the term $O(\frac{1}{N^2})$ in \eqref{noCommonAncestor} can be neglected and therefore the probability of no coalescent events in the previous generation becomes:
+\begin{equation}\label{noCommonAncestorsimplified}
+\begin{split}
+Pr\big(T_{MRCA}\neq 1\big)\approx 1-\frac{k\big(k-1)}{2N}
+\end{split}
+\end{equation}
+And therefore
+\begin{equation}\label{commonAncestorsimplified}
+\begin{split}
+Pr\big(T_{MRCA}= 1\big)= 1- Pr\big(T_{MRCA}\neq 1\big)\approx \frac{k\big(k-1)}{2N}=\binom{k}{2}\frac{1}{N}
+\end{split}
+\end{equation}
+And, similar to what we derived in equation \eqref{timeMRCA}, the probability that two genes out of $k$ different genes in a population of $N$ have a common ancestor $j$ generations back, is given by the probability of no common ancestor for $j-1$ generations, i.e. equation \eqref{noCommonAncestorsimplified} applied $j-1$ times, and then a common ancestor, i.e. equation \eqref{commonAncestorsimplified}, applied once:
+\begin{equation}\label{discreteCoalescent}
+\begin{split}
+Pr\big(T_{MRCA}=j \big)=\bigg(\frac{k\big(k-1)}{2N}\bigg) \bigg(1-\frac{k\big(k-1)}{2N}\bigg)^{j-1}
+\end{split}
+\end{equation}
+Please note that, in equation \eqref{discreteCoalescent}, for simplicity we have used the $=$ sign instead of $\approx$ as in equations \eqref{noCommonAncestorsimplified} and \eqref{commonAncestorsimplified}, but it is an approximation nevertheless, valid for $N\gg k$.
+
+\subsection{The continuous time Coalescent} 
+In the Wright-Fisher model introduced in one of its simplest versions in section \ref{section: wright-fisher} and expanded with equation \eqref{discreteCoalescent}, the time is assumed discrete and indicates the number of generations. Firstly we can notice that, by scaling the time by a factor of $N$ \cite{coalescentPrimer} we have that:
+\begin{equation}\label{coalescentTime}
+t_j=\frac{j}{N}
+\end{equation}
+Using the time as in \eqref{coalescentTime} allows us to express the results independently from the population size $N$, and therefore the results will hold for any population, independently of its size, as long as the constraints of the model, explained in sections \ref{section: wright-fisher} and \ref{section: coalescent} hold (importantly that the sample size $k$ is much smaller than the population size $N$ \cite{coalescentPrimer}). It can be shown that \cite{coalescentPrimer}, using the time-scale transformation of equation \eqref{coalescentTime} and the assumption that the population size is much bigger than the number of samples $N\gg k$, the geometric distribution converges to an exponential distribution, and in fact Kingman showed in \cite{kingman} that as $N$ grows the coalescent process converges to a continuous-time process, having rate shown in the following equation \eqref{lambdaCoalescentExponential}
+\begin{equation}\label{fromDiscreteToContinuousCoalescent}
+\begin{split}
+Pr\big(T_{MRCA}=j \big)=\bigg(\frac{k\big(k-1)}{2N}\bigg) \bigg(1-\frac{k\big(k-1)}{2N}\bigg)^{j-1} \xrightarrow[]{N\gg k}\lambda \exp ^{-\lambda j}
+\end{split}
+\end{equation}
+with the rate of the exponential distribution given by 
+\begin{equation}\label{lambdaCoalescentExponential}
+\lambda=\frac{k\big(k-1)}{2N}
+\end{equation}
+Equation \eqref{fromDiscreteToContinuousCoalescent} gives us the distribution of coalescent times in continuous time. Rewriting \eqref{fromDiscreteToContinuousCoalescent}, and using $\tau$ to express the time instead of the discrete $j$, we have that the density expressing the probability that two lineages out of k coalesce at time $\tau$ is given by:
+\begin{equation}\label{continuousCoalescent}
+\begin{split}
+Pr\big(T_{MRCA}=\tau \big)=exp^{-\frac{k(k-1)\tau}{2N}}=exp^{-\binom{k}{2}\frac{\tau}{N}}
+\end{split}
+\end{equation}
+The expected value of \eqref{continuousCoalescent}, and therefore the average first coalescent time when we have $k$ different lineages and a population size of $N$, using the properties of the exponential distribution, is $\frac{1}{\lambda}$, i.e., using equation \eqref{lambdaCoalescentExponential}.
+\begin{equation}\label{expectedSingleCoalescent}
+E(\tau|k, N)=\frac{2N}{k(k-1)}
+\end{equation}
+ So, using equation \eqref{continuousCoalescent}, if we want to express the density for all the times so that all the $k$ different samples arrive to a unique common ancestor, considering that, as per hypotheses of the generations are not overlapping, there is complete mixing of the population, and that the population size is constant, the probability those times are the result of the coalescent process reducing $k$ lineages into 1 is obtained by multiplying the (independent) probabilities for each coalescence even:
+\begin{equation}\label{generalcoalescent}
+f(\tau_0 \text{,... }\tau_k|N)\propto\prod_{i=1}^{k-1}\frac{1}{N}\exp^{-\frac{k_i(k_i-1)\tau_i}{2N}}
+\end{equation}
+where, in equation \eqref{generalcoalescent}, the $k_i$ express the number of different samples at each coalescent event, so for example if we start the analysis with $k=5$ samples (lineages), at the first coalescent event we will have $k_1=5$, then, since two of the lineages will have merged, in the second coalescent event we have $k_2=5-2=3$ lineages, etc, for a number of coalescent events equal to $k-1$ to arrive to the common ancestor of all.
+
+\begin{comment}
+\begin{equation}\label{SMCalgorithmSteps1}
+\begin{aligned}
+\text{step 0)}  \text{ }x_{0}\sim p_{0} \\
+\text{step 1)} \text{ MCMC to move from } p_0 \text{ to } p_1\text{, }x_{1}\sim p_{1}\\
+\text{step 2)}  \text{ MCMC to move from } p_1 \text{ to } p_2\text{, }x_{2}\sim p_{2}\\
+... \\
+\text{step n)} \text{ MCMC to move from } p_{n-1} \text{ to } p_n\text{, }x_{n}\sim p_{n} \\
+\end{aligned}
+\end{equation}
+
+\begin{enumerate}\addtocounter{enumi}{-1}
+\item in step 0 we draw $x_{0}$ from the starting proposal distribution, for example the prior, $p_{0}$, by assumption easy to draw from
+	\item in step 1 we apply a Markov kernel $k(x_0,x_1)$ with target $p_1$ of \eqref{f0explained}, that allows us to move in the state space and, using the results seen in the MCMC section \ref{section: mcmc}, this means that we approximate drawing $x_1$ from the distribution $p_1$
+\item similarly to what we did in the previous step, we move towards $p_2$ and we approximate drawing $x_2$ from the distribution $p_2$
+\end{enumerate}
+
+
+\section{Standard Coalescent}\label{section: coalescent}
+
+\section{Substitution model}\label{section: substitution model}
+
+\section{Jukes Cantor}\label{section: jukescantor69}
+
+\end{comment}
+
+\begin{thebibliography}{99}
+	\bibitem{annealedis}
+	Annealed Importance Sampling, Radford M. Neal, 1998
+	\bibitem{calderheadthesis}
+	Differential Geometric MCMC Methods and Applications, Calderhead B., PhD thesis, University of Glasgow, 2011
+	\bibitem{montecarlomethodsbib}
+	The Monte Carlo method, Metropolis N. and Ulam S.,  Journal of the American Statistical Association, 44(247), 1949
+	\bibitem {mcmcnotes}
+	Monte Carlo Methods Lecture Notes,  Johansen Adam M. and Evers L., University OfBristol, 2007
+	\bibitem{mcmcintromachinelearning}
+	An Introduction to MCMC for Machine Learning, Andrieu C. et al, Machine Learning, 50, 5–43, 2003, Kluwer Academic Publishers
+	\bibitem{hastings} Monte Carlo sampling methods using Markov chains and their Applications, Hastings, W. K. (1970), Biometrika 57, 97–109
+	\bibitem{metropolis} Equations of state
+	calculations by fast computing machines, Metropolis, N., Rosenbluth, A. W., Rosenbluth, M. N., Teller, A. H., Teller, E. (1953), Journal of Chemical Physics, 21, 1087–1091
+	\bibitem{tamethebeast}Substitution model averaging, Rasmussen D. A., Magnus C., Bouckaert R., website: https://taming-the-beast.org/tutorials/Substitution-model-averaging/
+	\bibitem{multigammasitemodels}Capturing heterotachy through multi-gamma site models, Bouckaert R., Lockhart P., bioRxiv, Doi: 10.1101/018101 (2015)
+	\bibitem{yangdiscretebeta}Maximum Likelihood Phylogenetic Estimation from DNA Sequences with Variable Rates over Sites: Approximate Methods, Yang Z., J. Mol Evol (1994) 39:306-314
+	\bibitem{felsenstein}Evolutionary Trees from DNA Sequences: A Maximum Likelihood Approach, Felsenstein J., J Mol Evol (1981) 17:368-376
+	\bibitem{drummondestimatepopsize}Estimating  Mutation  Parameters,  Population  History  and  Genealogy Simultaneously From Temporally Spaced Sequence Data, Drummond, A. J. , Nicholls, G. K., Rodrigo A. G. and Solomon, W., GENETICS July 1, 2002 vol. 161 no. 3 1307-1320
+	\bibitem{who_pdf}
+	http://www.who.int/globalchange/environment/en/chapter6.pdf, 
+	VVAA
+	\bibitem{elegantIS}Importance Sampling: Intrinsic Dimension and Computational Cost,  Agapiou, S., Papaspiliopoulos, O., Sanz-Alonso, D., Stuart, A. M. 
+	Statist. Sci. 32 (2017), no. 3, 405--431. doi:10.1214/17-STS611. https://projecteuclid.org/euclid.ss/1504253124
+	\bibitem{RobertCasella} Monte Carlo Statistical Methods, Robert, C. P., Casella, G. (2004),  Springer
+	\bibitem{OwenIS} Monte Carlo theory, methods and examples, Owen, A. (2013).  http://statweb.stanford.edu/∼owen/mc/
+	\bibitem{RethinkingESS} Rethinking The Effective Sample Size, Elvira, V., Martino, L. Robert, C. P. (2018).  arXiv: 1809.04129
+	\bibitem{Kong1} A note on importance sampling using standardized weights., Kong, A. (1992).  University of Chicago, Dept. of Statistics, Tech. Rep 348.
+	\bibitem{Kong2} Sequential imputations and Bayesian missing data problems. Kong, A., Liu, J. S. and Wong, W. H. (1994). Journal of the American Statistical Association 9 278-288.
+	\bibitem{Metropolis}Equations of state calculations by fastcomputing machines, Metropolis, N., Rosenbluth, A., Rosenbluth, M., Teller, A., and Teller, E. (1953) J. Chem. Phys., 21 (6), 1087–1092.
+	\bibitem{Hastings} Monte Carlo sampling methods using Markov chains and their application, Hastings, W. (1970), Biometrika, 57, 97–109.
+	\bibitem{wrightexplained} Statistical Inference in the Wright-Fisher Model Using Allele Frequency Data, Tataru, P., Simonsen M, Bataillon T, Hobolth A., Syst Biol. 2017;66(1):e30-e46. doi:10.1093/sysbio/syw056
+	\bibitem{wright1931} Evolution in Mendelian populations., Wright S. (1931).  Genetics 16: 97–159.
+	\bibitem{fisher}The genetical theory of natural selection., Fisher R.A. (1930). Oxford: Clarendon.
+	\bibitem{coalescentPrimer} Gene genealogies, variation and evolution: a primer in coalescent theory, Hein, J., Schierup, M. Wiuf, C. (2004), Oxford university press .
+	\bibitem{kingman} The coalescent, Kingman, J. (1982), Stochastic processes and their applications
+	13(3), 235–248
+	\bibitem{curseOfDimensionality} The Curse of Dimensionality for Numerical Integration of Smooth Functions. Hinrichs, A., et al. (2014).  Mathematics of Computation. 83. 2853-2863. 10.1016/j.jco.2013.10.007. 
+
+\end{thebibliography}
+
+\end{document}
+
