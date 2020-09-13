@@ -38,10 +38,6 @@ In the following chapters, unless otherwise stated, we will use the symbols as f
 	\item the capital letters, for example $P$, for probability distributions
 	\item the lowercase letters $p$, $g$ for probability density functions
 	
-	\begin{comment}
-	\item the lowercase letters with an hat symbol, for example $\hat{p}$, for normalised quantities
-	\end{comment}
-	
 	\item $\theta$ and $x$ to indicate the random variables to estimate
 	\item $y$ for the observations
 \end{itemize}
@@ -109,9 +105,6 @@ be finite.
 
 
 \section{Importance Sampling}\label{section:IS}
-\begin{comment}
-LEO: FROM PAGE 6 OF AIS PAPER FROM RASHFORD U CAN TAKE THE ESTIMATE OF THE RATIO OF THE NORMALISING CONSTANTS, JUST TAKE THE REFERENCE TO THE PAPER AND CITE THE RESULT
-\end{comment}
 Importance sampling (IS) provides a way to estimate integrals by the use of an instrumental auxiliary distribution. In detail, let's assume that we want to calculate the expectation of a function $f$ according to the density $p$, assumed to be $0$ outside $\mathbf{D} \subseteq \mathbb{R}^n$
 \begin{equation}\label{expectationis}
 E_{p}(f(\theta))=\int_{\mathbf{D}} f(\theta) p(\theta) dx=\mu
@@ -221,13 +214,6 @@ Where Z is the normalising constant expressed in \eqref{normalisingConst}. It is
 Where, in \eqref{finalESS}, in the first equation the $w^{(j)}$ are unnormalised weights of equation \eqref{weightseqn_f_on_g}, whereas in the second equation the $\bar{w}^{(j)}$ are the self-normalised weights of equation \eqref{selfnormalizedweight}.
 
 \section{Markov Chain Monte Carlo (MCMC)}\label{section: mcmc}
-\begin{comment}
-LEO: IN THIS INTRODUCTORY PART PUT ALL TH STEPS TO SHOW THAT THE MCMC CONVERGES TO F: WE WANT TO DRAW SAMPLES FROM F AND WE'LL DO WITH KERNEL AND PROPOSAL
-LEO: PUT IN THE BEGINNING WHAT URE GOING TO DO: WELL DEMONSTRATE HOW TO THIS AND THAT, AND THAT SAMPLES ARE TAKEN ETC ETC
-LEO: RENAME PI AS F AND POSSIBLY THE X AS THETA
-LEO : UNCERTAINTY OF THE MCMC
-LEO: FROM SLIDE 27 GANDY TAKE ERGODICITY OF MH
-\end{comment}
 We will introduce in this section Markov Chains Monte Carlo (MCMC). Like the Monte Carlo methods in previous sections, MCMC provides an indirect way to approximate drawing samples from a distribution that we cannot directly draw from. Unlike the traditional MC and Importance Sampling, MCMC samples are not independently distributed: as we can see from equation \eqref{markovianity} in fact, there is conditional dependence between values. A stochastic process is defined Markov Chain Monte Carlo if, considering $X_1, X_2, ...X_N$ random variables defined on a common probability space $\big(\chi, \mathcal{A}, P\big)$, that are the realization of the process, it has the following so-called Markov property:
 \begin{equation}\label{markovianity}
 P(X^{(t)}=x^{(t)}|X^{(t-1)}=x^{(t-1)},...,X^{(1)}=x^{(1)})=P(X^{(t)}=x^{(t)}|X^{(t-1)}=x^{(t-1)})
@@ -236,10 +222,6 @@ As we can see from  \eqref{markovianity}, the value of the chain at a particular
 
 \subsection{Markov Kernel}\label{section:Markovkernels}
 Considering two measurable spaces $\big(\chi, A\big)$, $\big(Y, B\big)$ a transition kernel is a map \cite{RobertCasella}  $K:\chi \times B\rightarrow [0,1]$, s.t.
-
-\begin{comment}
-LEO: DEFINE THE PROBABILITY MEASURE P SOMEWHERE
-\end{comment}
 
 \begin{itemize}\label{MArkovKernel}
 	\item $\forall x \in \chi$, $k(x,\cdot)$ is a probability measure
@@ -292,31 +274,6 @@ so we can express \eqref{generalMCMCfinalControcazzi} as
 P(X_0=x_0,...X_n=x_n)= \\
 \mu(x_0)k^n(x_{0},x_n)
 \end{equation}
-
-\begin{comment}
-\subsection{Irreducibility, recurrence and Harris-recurrence}
-We firstly introduce the concepts of $\textit{stopping time}$ and $\textit{number of passages}$. The quantity $\tau_A$ is called stopping time \cite{RobertCasella} when it denotes the first $t$ for which the chain $X_t$ enters the set A:
-\begin{equation}\label{stoppingTimeMCMC}
-\tau_A=inf\bigl\{t\geq1: X_t\in A \bigr\}
-\end{equation}
-Associated with every set $A$ we also have the number of passages of the chain in $A$
-\begin{equation}\label{nrOFPassagesMCMC}
-n_A=\sum_{t=0}^{\infty} \mathbb{I}_A(X_t)
-\end{equation}
-Now we introduce the concept of \textbf{irreducibility}, which is a measure of the sensitivity of the Markov Chain to the initial condition $X_0$ and the initial distribution $\mu$. Given a measure $\phi$, we say that the chain $X_n$ is $\pi$-irreducible if any subset $A$ of the state space can be reached from the chain starting anywhere, in mathematical terms it means that the stopping time of the chain in any set $A$ is finite, starting from any $X_0$, therefore \textbf{irreducibility} is defined as follows:
-\begin{equation}\label{irreducibility}
-P(\tau_A<\infty | X_0)>0 \text{, }\forall X_0 \in \chi\text{, }\forall A \subseteq \chi\text{ s.t. }\pi(A)>0
-\end{equation}
-The chain $X_n$ is \textbf{recurrent} if there is a measure $\pi$ s.t. $X_n$ is $\pi$-irreducible, and for any starting point $X_0$, for any set $A$, the chain will return to the set A an infinite number of times (on the other hand, if the set is reached a finite number of time the chain is defined \textit{transient}). In mathematical terms, considering equation \eqref{nrOFPassagesMCMC}, \textbf{recurrence} is defined as follows:
-\begin{equation}\label{recurrence}
-E(\eta_A)=+\infty\text{, }\forall X_0 \in \chi\text{, }\forall A \subseteq \chi\text{ s.t. }\pi(A)>0
-\end{equation}
-\textbf{Harris-recurrence} is a stronger recurrence condition than \eqref{recurrence}: if there is a measure $\pi$ s.t. $X_n$ is $\pi$-irreducible, the chain $X_n$ is \textbf{Harris-recurrent} if:
-\begin{equation}\label{Harrisrecurrence}
-P(\eta_A=+\infty)=1\text{, }\forall X_0 \in \chi\text{, }\forall A \subseteq \chi\text{ s.t. }\pi(A)>0
-\end{equation}
-Harris recurrence expressed in \eqref{Harrisrecurrence} is a stronger condition than simple recurrence of \eqref{recurrence}, it is possible to find examples, for example see \cite{RobertCasella}, where \eqref{recurrence} is satisfied but \eqref{Harrisrecurrence} is not.
-\end{comment}
 
 \subsection{Stationary property of the MCMC and invariant distribution}\label{section: InvariantDistribMCMC}
 We will in this section introduce the concept of \textbf{stationary/invariant distribution} of the chain, i.e. a distribution $\pi$ s.t. \cite{RobertCasella}:
@@ -373,11 +330,18 @@ k(x_{n+1}, x_{n})=\alpha(x^*_{n+1} | x_n)g(x^*_{n+1} | x_n)+\mathbf{1}_{\bigl\{x
 It can be demonstrated \cite{mcmcnotes} \cite {RobertCasella} that the kernel \eqref{kernelMH} satisfies the reversibility condition \eqref{reversibilityMCMC} and therefore, as explained in section \ref{section: InvariantDistribMCMC}, $p$ is the invariant distribution of the chain.
 
 \section{Annealed Importance Sampling (AIS)}\label{section: AIS}
-\begin{comment}
-LEO: IN THE BEGINNING IT IS COPIED FROM THE AIS PAPER, CHANGE IT IN STEADY STATE
-\end{comment}
-The \textbf{Annealed importance Sampling (AIS)} algorithm can be seen as an enhancement \cite{annealedis} to the Importance Sampling and MCMC tecniques introduced in sections \ref{section:IS} and \ref{section: mcmc}. In particular, as we will see later on in the section, Annealed Importance Sampling allows us to move from an initial tractable distribution to a target distribution of interest, which is intractable or difficult to draw from.  AIS is most useful in cases of isolated modes, it works better, in general, that IS because for importance sampling to work well the variance of the weights should not vary too much, and, in case of isolated modes, some of the samples can different modes, which will be assigned different weights and the variation in weights due to this will be large if some important modes are found only rarely. AIS will also in general work better than MCMC in case of isolated modes, in fact when MCMC is used to sample from complex distributions it must usually proceed by making only small changes to the state variables \cite{annealedis}, and this causes the chain to move between modes only rarely, and so to take a long time to reach equilibrium, and will exhibit high autocorrelations for functions of the state variables out to long time lags. The AIS is a heuristic for avoiding to this problem, allowing to  gradually approach the desired the distribution of interest by making use of interpolating distributions.
-We proceed with the description of the method. The aim of the algorithm of AIS \cite{annealedis} is, as all other Monte Carlo methods, to approximate the drawing of samples from a target distribution of interest, let's call this normalised target distribution $p_n$, and $f_n$ the associated un-normalised version (in the rest of the section we will use either or both $p$ and $f$ with indexes e.g. $p_j$ and $f_j$ for normalised and un-normalised distributions). AIS makes use of the methods of IS and MCMC, in fact it will use intermediate proposal distributions to draw from, and will make use of MCMC to move between the intermediate steps. The algorithm starts by sampling from an initial proposal distribution that we call $f_0$ (or a said $p_0$), often a candidate for this proposal is the prior \cite{annealedis}. As said, the AIS moves from the initial distribution to the target $f_n$ with intermediate target distributions $f_j$
+We will, in this section, introduce a Monte Carlo method named \textbf{Annealed importance Sampling (AIS)}. Like the other methods introduced so far, the AIS is used to approximating drawing from a target distribution, in particular the AIS can be seen as an enhancement \cite{annealedis} to the Importance Sampling and MCMC tecniques introduced in sections \ref{section:IS} and \ref{section: mcmc}, and we will see later in this section that it combines the two (MCMC and IS). Annealed Importance Sampling allows us to move from an initial tractable distribution to a target distribution of interest, which is intractable or difficult to draw from.
+\subsubsection{Annealed Importance Sampling vs Importance Sampling}
+We have seen in section \ref{section:IS} that an important measure for IS is the Effective Sample Size (ESS), a quantity that provides us with a measure of how close the IS process is to an ideal situation where we can draw directly from the target distribution. Studies have shown that, in some reference scenarios \cite{IS_cost}, the number of Importance samples N has to be increased exponentially as the dimension of the state space increases, to keep the ESS at a predefined level. Therefore the approximation of the target given by the IS method in general deteriorates exponentially with the dimension. It has to be noted that the "curse of dimensionality" for IS, does not always automatically happen \cite{IS_cost}, as there may be cases where there is a diminishing response of the likelihood to perturbations in growing coordinate index, and in such case increasing the state space dimension has only a mild effect in the cost of the problem. Also, a relatively recent field of study focuses on \textit{active subspaces} \cite{IS_cost}: 
+ in many application areas where models are formulated in high dimensional state spaces, there is often a small subspace which captures most of the features of the system. It is the dimension of this subspace that mainly affects the cost of the problem, and in presence of these active subspaces, we expect as well that the number of particles to keep a predetermined ESS will be given mainly by the dimensionality of the subspace, which is relatively constant, and will not therefore be subject to the curse of dimensionality.
+
+Aside from the particular cases, IS is therefore affected negatively (at an exponential rate) by high dimensions. In contrast, it has been shown that \cite{crisan1} \cite{crisan2} sequential Monte Carlo methods like AIS and Sequential Monte Carlo (SMC, introduced later in this section), scale polynomially as the dimension $d$ of the state space grows large. In particular it has been shown \cite{crisan1} \cite{crisan2} that it is possible to find an approximation s.t. the ESS remains at a predermined level at a cost $O(Nd^2)$, where $N$ is the number of particles and $d$ the dimension of the state space. In addition, it is possible to approximate expectations wrt any marginal, at the cost, uniformly in $d$, of $\frac{1}{\sqrt{N}}$ \cite{crisan1} \cite{crisan2}.
+
+\subsubsection{Annealed Importance Sampling vs MCMC}
+AIS is most useful in cases of isolated modes, it works better, in general, that IS because for importance sampling to work well the variance of the weights should not vary too much, and, in case of isolated modes, some of the samples can different modes, which will be assigned different weights and the variation in weights due to this will be large if some important modes are found only rarely. AIS will also in general work better than MCMC in case of isolated modes, in fact when MCMC is used to sample from complex distributions it must usually proceed by making only small changes to the state variables \cite{annealedis}, and this causes the chain to move between modes only rarely, and so to take a long time to reach equilibrium, and will exhibit high autocorrelations for functions of the state variables out to long time lags. The AIS, allowing to gradually approach the desired distribution of interest by making use of interpolating distributions, is an approach to avoid this.
+
+\subsubsection{The AIS algorithm}
+We proceed with the description of the algorithm. We state again that the aim of the AIS algorithm \cite{annealedis} is, as all other Monte Carlo methods, to approximate the drawing of samples from a target distribution of interest: let's call this normalised target distribution $p_n$, and $f_n$ the associated un-normalised version (in the rest of the section we will use either or both $p$ and $f$ with indexes e.g. $p_j$ and $f_j$ for normalised and un-normalised distributions). AIS makes use of the methods of IS and MCMC, in fact it will use intermediate proposal distributions to draw from, and will make use of MCMC to move between the intermediate steps. The algorithm starts by sampling from an initial proposal distribution that we call $f_0$ (or a said $p_0$), often a candidate for this proposal is the prior \cite{annealedis}. As said, the AIS moves from the initial distribution to the target $f_n$ with intermediate target distributions $f_j$
 \begin{equation}\label{fjAIS}
 f_j(x)=f_n(x)^{\beta(j)} f_0(x)^{1-{\beta(j)}}, \;\;\; j=1,2,..N, \;\;\; 0\leq\beta(j)\leq1
 \end{equation}
@@ -441,15 +405,16 @@ Therefore, the AIS can be see as a multi-step importance sampling, and the expre
 \begin{equation}\label{fullWeightsAIS}
 w^{(i)}=\frac{f(x_0, ... x_n)}{g(x_0, ... x_n)}=\frac{f_{1}(x_{0})}{f_{0}(x_{0})}\frac{f_{2}(x_{1})}{f_{1}(x_{1})}\text{...}\frac{f_{n}(x_{n})}{f_{n-1}(x_{n})}\end{equation}
 And \eqref{fullWeightsAIS} brings the result \eqref{AISweights}, which proves our case.
-Since, as we saw in the steps of \eqref{AISalgorithmSteps}, at each step $x_j \sim f_j$ and therefore the function $f_j$ becomes the proposal for the next step $f_{j+1}(x_j)$, all the rules that apply to importance sampling choice of proposal hold (please see section \ref{section:IS}). The choice of the proposal, as in importance sampling, is critical for the success of the algorithm, and we will see in the application to phylogenesis that in non-trivial cases smooth transitions between functions, i.e. small steps in the exponent $\beta$ of formula \eqref{fjAIS}, are needed to have an acceptable Effective Sample Size.
+Since, as we saw in the steps of \eqref{AISalgorithmSteps}, at each step $x_j \sim f_j$ and therefore the function $f_j$ becomes the proposal for the next step $f_{j+1}(x_j)$, all the rules that apply to importance sampling choice of proposal hold (please see section \ref{section:IS}). The choice of the proposal, as in importance sampling, is critical for the success of the algorithm, and we will see in later sections in the application to phylogenetic analysis of DNA sequences that in non-trivial cases smooth transitions between functions, i.e. small steps in the exponent $\beta$ of formula \eqref{fjAIS}, are needed to have an acceptable Effective Sample Size.
 
 
 \section{Sequential Monte Carlo (SMC)}\label{section: SMC}
-\begin{comment}
-LEO: NELLE DISTRIBUZIONI INVECE DI P CHIAMARLE \PI
-LEO: METTERE I RIFERIMENTI BIBL PER SMC
-\end{comment}
-The \textbf{Sequential Monte Carlo (SMC)} algorithm has many commonalities with the AIS seen in section \ref{section: AIS}, in fact we will make use of consecutive "neighbouring" distributions, i.e. distributions that are not too different one from another so that the proposals and the target distributions, at each step, are sufficiently close. The starting point is, as in the common Monte Carlo methods, that we are willing to draw samples from a target distribution $\pi_n$. We proceed through intermediate targets as in equation \eqref{fjAIS}, and at each step the previous target become the proposal for the next target. We proceed in steps, similar to \eqref{AISalgorithmSteps}, we start by drawing from an initial distribution $pi_0$ easy to draw from, it can for example be the prior (in which case the expressions simplify as in equations \eqref{f0explained} and \eqref{fjsimplified}), and we go on constructing the first steps as done in \eqref{AISalgorithmSteps}. We present here the SMC version that makes use of resampling of the particles, we will explain further in the section what this implies. The steps of the SMC algorithm follow:
+\textbf{Sequential Monte Carlo (SMC)} methods are a collection of techniques used to approximate a target distribution.
+\subsubsection{SMC vs AIS}
+Like the AIS methods described in section \ref{section: AIS}, SMC uses IS and a sequence of proposals to approximate intermediate target functions, with the aim to create a set of particles that approximate a distribution of interest, not easy to draw from. A difference of SMC wrt AIS lies in that SMC uses a technique called \textit{resampling} to account for the fact that the variance of the particles weights usually increases with (algorithmic) time (in fact the AIS is a subcase of the SMC where we employ no resampling). A measure of the variability of weights commonly used is the ESS, as introduced already in sections \ref{section:IS} and \ref{section: AIS}. The resampling is a sampling with replacement from the current sample of particles using the weights and resetting them to 1/N afterwards (therefore if, for example, before the resampling a particle has a normalised weight twice as big as the others, it has twice as much chance than the others to "survive" the resampling process, and also to be "copied", i.e. resampled, into one or more new particles that will be a copy of it, whereas particles with little weight, and therefore little representative of the target, are more likely to be eliminated). A technique usually employed is to resample when the ESS drops below a given threshold (for example if the threshold is, say, 0.9, when the effective sample size drops below 90\% of the number of particles $N$ the resampling happens) \cite{crisan1}.
+
+\subsubsection{The SMC algorithm}
+As said in the introduction, the \textbf{Sequential Monte Carlo (SMC)} algorithm will have many commonalities with the AIS seen in section \ref{section: AIS}. We will, similarly to section \ref{section: AIS}, make use of consecutive "neighbouring" distributions, i.e. distributions that are not too different one from another so that the proposals and the target distributions, at each step, are sufficiently close. The starting point is, as in the common Monte Carlo methods, that we are willing to draw samples from a target distribution $\pi_n$. We proceed through intermediate targets as in equation \eqref{fjAIS}, and at each step the previous target become the proposal for the next target. We proceed in steps, similar to \eqref{AISalgorithmSteps}, we start by drawing from an initial distribution $pi_0$ easy to draw from, it can for example be the prior (in which case the expressions simplify as in equations \eqref{f0explained} and \eqref{fjsimplified}), and we go on constructing the first steps as done in \eqref{AISalgorithmSteps}. We present here the SMC version that makes use of resampling of the particles, we will explain further in the section what this implies. The steps of the SMC algorithm follow:
 \begin{equation}\label{SMCalgorithmSteps1}
 \begin{aligned}
 \text{step 0)}  \text{ }x_{0}\sim p_{0} \\
@@ -489,22 +454,19 @@ w^{(i)}_2=w^{(i)}_1\frac{p_2(x_1)}{p_1(x_1)}
 \end{equation}
 
 \section{Models of genetic evolution}\label{section: models of genetic evolution}
-\begin{comment}
-LEO: E' COPIATO DAL PAPER WRIGHT FISHER EXPLANATION QUINDI CAMBIALO A LUNGO TEMRINE
-\end{comment}
 The main goal of population genetics and of phylogenesis (we explain the differences of the two in section \ref{section: genetics vs phylogenesis}) is to infer the past history of populations and describe the evolutionary forces that have shaped their genetic variations. The current section will give a very brief and schematic explanation of the forces behind evolution.
 \subsection{DNA}
-\textbf{DNA} is packaged into \textbf{chromosomes}. Taking as example the human species, there are 46 chromosomes situated in the cells nuclei, i.e. 23 pairs, one of each chromosome is inherited by the mother, the other by the father. \textbf{Genes} are section of the chromosome situated in so-called \textbf{loci}, each gene is responsible for a trait, for example hair colour. Different variations of the same gene are called \textbf{alleles}. The expression of different alleles of the same gene will result in different characteristics, for example a different colour of hair, say brown or blonde.
+\textbf{DNA} is packaged into \textbf{chromosomes}. Taking as example the human species, there are 46 chromosomes situated in the cells nuclei, 23 pairs, one of each chromosome is inherited by the mother, the other by the father. \textbf{Genes} are section of the chromosome situated in so-called \textbf{loci}, each gene is responsible for a trait, for example hair colour. Different variations of the same gene are called \textbf{alleles}. The expression of different alleles of the same gene will result in different characteristics, for example a different colour of hair, say brown or blonde.
 
 \subsection{Population genetics vs phylogenesis}\label{section: genetics vs phylogenesis}
 As introduced at the beginning of this section \ref{section: models of genetic evolution}, the forces that shape genetic evolution can vary, and the resulting differences in the DNA may be due to, just to shortlist some  \cite{wrightexplained}:
 \begin{itemize}
-	\item \textbf{random drift} (change in frequency of combination of certain alleles in a population due to chance, resulting in change of frequency of specific traita in a population)
-	\item \textbf{mutations} (occasional errors in the replication of DNA)
-	\item \textbf{selection} (mutations that are more advantageous become more likely to be passed to the following generations)
+	\item \textbf{random drift}: changes in frequency of combination of certain alleles in a population due to chance, resulting in change of frequency of specific traits in a population
+	\item \textbf{mutations}: occasional errors in the replication of DNA
+	\item \textbf{selection}: mutations that are more advantageous become more likely to be passed to the following generations
 \end{itemize}
 \textbf{Population genetics} usually deals with timescales within a generation \cite{wrightexplained}, and data often consists of time series of allele frequencies, estimated from multiple DNA samples from the same generation, and the task is to estimate the changes of allele frequencies over time, this is done for example using the \textbf{Wright-Fisher model}, introduced in section \ref{section: wright-fisher}.
-\\*\textbf{Phylogenesis} usually considers timescales of multiple generations \cite{wrightexplained}, and data often consist of a single sample from each specie, and the task is generally to infer such parameters as divergence times of the species, populations size. Such task is accomplished for example by the \textbf{Coalescent model}, introduced in section \ref{section: coalescent}
+\\*\textbf{Phylogenesis} usually considers timescales of multiple generations \cite{wrightexplained}, and data often consist of a single sample from each species, and the task is generally to infer such parameters as divergence times of the species and populations size. Such task is accomplished for example by the \textbf{Coalescent model}, introduced in section \ref{section: coalescent}
 \\*Of course the above subdivision between population genetics and phylogenesis is to be taken as a reference and differences between the two can be blurred, for example in the cases where we consider data sets containing DNA sequences that comprise recently diverged species and we need to model both types of differences in the data: mutations that are still polymorphic (i.e. short timescale mutations where we still see expressions of all different alleles) and mutations that have been fixed as substitutions and have therefore a longer timescale\cite{wrightexplained}.
 
 \subsection{The Wright-Fisher model}\label{section: wright-fisher}
@@ -586,7 +548,7 @@ And so, under the hypotheses of the model, after a few generations only a few li
 \begin{equation}\label{exampleWrightFisher}
 10000\big(0.63\big)^{15} \approx 10
 \end{equation}
-The remaining $10000-10=9990$ lineages that, in the example were present $15$ generations ago, have not survived.
+The remaining $10000-10=9990$ lineages that, in the example, were present $15$ generations ago, have not survived.
 
 \section{Standard Coalescent}\label{section: coalescent}
 From the simple version of the Wright-Fisher model described in the previous section \ref{section: wright-fisher}, where we introduced probabilities concerning different versions of a gene, we move on to the problem of estimating times of when gene variations happen, and from there to derive the \textit{Coalescent Model}, that describes the distribution of the times of the ancestors of different genes sampled from different individuals.
@@ -660,31 +622,6 @@ f(\tau_0 \text{,... }\tau_k|N)\propto\prod_{i=1}^{k-1}\frac{1}{N}\exp^{-\frac{k_
 \end{equation}
 where, in equation \eqref{generalcoalescent}, the $k_i$ express the number of different samples at each coalescent event, so for example if we start the analysis with $k=5$ samples (lineages), at the first coalescent event we will have $k_1=5$, then, since two of the lineages will have merged, in the second coalescent event we have $k_2=5-2=3$ lineages, etc, for a number of coalescent events equal to $k-1$ to arrive to the common ancestor of all.
 
-\begin{comment}
-\begin{equation}\label{SMCalgorithmSteps1}
-\begin{aligned}
-\text{step 0)}  \text{ }x_{0}\sim p_{0} \\
-\text{step 1)} \text{ MCMC to move from } p_0 \text{ to } p_1\text{, }x_{1}\sim p_{1}\\
-\text{step 2)}  \text{ MCMC to move from } p_1 \text{ to } p_2\text{, }x_{2}\sim p_{2}\\
-... \\
-\text{step n)} \text{ MCMC to move from } p_{n-1} \text{ to } p_n\text{, }x_{n}\sim p_{n} \\
-\end{aligned}
-\end{equation}
-
-\begin{enumerate}\addtocounter{enumi}{-1}
-\item in step 0 we draw $x_{0}$ from the starting proposal distribution, for example the prior, $p_{0}$, by assumption easy to draw from
-	\item in step 1 we apply a Markov kernel $k(x_0,x_1)$ with target $p_1$ of \eqref{f0explained}, that allows us to move in the state space and, using the results seen in the MCMC section \ref{section: mcmc}, this means that we approximate drawing $x_1$ from the distribution $p_1$
-\item similarly to what we did in the previous step, we move towards $p_2$ and we approximate drawing $x_2$ from the distribution $p_2$
-\end{enumerate}
-
-
-\section{Standard Coalescent}\label{section: coalescent}
-
-\section{Substitution model}\label{section: substitution model}
-
-\section{Jukes Cantor}\label{section: jukescantor69}
-
-\end{comment}
 
 \begin{thebibliography}{99}
 	\bibitem{annealedis}
@@ -723,7 +660,12 @@ where, in equation \eqref{generalcoalescent}, the $k_i$ express the number of di
 	\bibitem{coalescentPrimer} Gene genealogies, variation and evolution: a primer in coalescent theory, Hein, J., Schierup, M. Wiuf, C. (2004), Oxford university press .
 	\bibitem{kingman} The coalescent, Kingman, J. (1982), Stochastic processes and their applications
 	13(3), 235–248
-	\bibitem{curseOfDimensionality} The Curse of Dimensionality for Numerical Integration of Smooth Functions. Hinrichs, A., et al. (2014).  Mathematics of Computation. 83. 2853-2863. 10.1016/j.jco.2013.10.007. 
+	\bibitem{curseOfDimensionality} The Curse of Dimensionality for Numerical Integration of Smooth Functions. Hinrichs, A., et al. (2014).  Mathematics of Computation. 83. 2853-2863. 10.1016/j.jco.2013.10.007
+	\bibitem{IS_cost} Importance
+	sampling: Intrinsic dimension and computational cost. Agapiou, S., Papaspiliopoulos, O., Sanz-Alonso, D., Stuart, A., et al. (2017).  Statistical Science, 32(3):405–431.
+	\bibitem{crisan1} Error Bounds and Normalizing Constants for Sequential Monte Carlo in
+	High Dimensions. Beskos, Alexandros , Crisan, Dan ,  Jasra, Ajay , Whiteley, Nick. (2011)
+	\bibitem{crisan2} On the stability of sequential Monte Carlo methods in high dimensions. Beskos, A., Crisan, D., Jasra, A. Ann. Appl. Probab. 24 (2014), no. 4, 1396--1445. doi:10.1214/13-AAP951
 
 \end{thebibliography}
 
