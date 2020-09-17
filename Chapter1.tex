@@ -27,7 +27,7 @@
 \maketitle
 
 \begin{abstract}
-My research focuses on the developement of Monte Carlo methods for phylogenetic inference of DNA sequences, in particular on the developement of Sequential Monte Carlo (SMC) algorithms for online onference of the spread of diseases. In this thesis I will explain the work on phylogenetic inference, and the results I have had after developing statistical algorithms using a software package named BEAST (the acronym stands for Bayesian Evolutionary Analysis by Sampling Trees). I will explain the benefits and limitations of several Monte Carlo methods, starting from Importance Sampling (IS) , to the Annealed Importance Sampling (AIS) and finally Sequential Monte Carlo (SMC), showing that the latter presents greater efficacy in complex problems.
+My research focuses on the development of Monte Carlo methods for phylogenetic inference of DNA sequences, in particular on the development of Sequential Monte Carlo (SMC) algorithms for online inference of the spread of diseases. In this thesis I will explain the work on phylogenetic inference, and the results I have had after developing statistical algorithms using a software package named BEAST (the acronym stands for Bayesian Evolutionary Analysis by Sampling Trees). I will explain the benefits and limitations of several Monte Carlo methods, starting from Importance Sampling (IS), to the Annealed Importance Sampling (AIS) and finally Sequential Monte Carlo (SMC), showing that the latter presents greater efficacy in complex problems.
 \end{abstract}
 
 \section{Introduction}\label{section:Introduction}
@@ -105,11 +105,11 @@ be finite.
 
 
 \section{Importance Sampling}\label{section:IS}
-Importance sampling (IS) provides a way to estimate integrals by the use of an instrumental auxiliary distribution. In detail, let's assume that we want to calculate the expectation of a function $f$ according to the density $p$, assumed to be $0$ outside $\mathbf{D} \subseteq \mathbb{R}^n$
+Importance sampling (IS) provides a way to estimate integrals by the use of an instrumental auxiliary distribution, named \textbf{proposal distribution}. In detail, let's assume that we want to calculate the expectation of a function $f$ according to the density $p$, assumed to be $0$ outside $\mathbf{D} \subseteq \mathbb{R}^n$
 \begin{equation}\label{expectationis}
 E_{p}(f(\theta))=\int_{\mathbf{D}} f(\theta) p(\theta) dx=\mu
 \end{equation}
-we may want to approximate the integral via use of the sum as in equation \eqref{approximatedmean}, but let's assume we cannot draw easily samples from the distribution $p$. We can use an auxiliary distribution, defined \textbf{proposal distribution}, $g$, easier to draw from: it is sufficient that $g(\theta)>0$,  $\forall \theta \in \mathbf{Q}$, where $\mathbf{Q}=\{\theta | f(\theta)p(\theta)\neq 0\}$. The validity of the process is shown by the equivalences below \cite{OwenIS}
+we may want to approximate the integral via use of the sum as in equation \eqref{approximatedmean}, but let's assume we cannot draw easily samples from the distribution $p$. We can use a proposal distribution, $g$, easier to draw from: it is sufficient that $g(\theta)>0$,  $\forall \theta \in \mathbf{Q}$, where $\mathbf{Q}=\{\theta | f(\theta)p(\theta)\neq 0\}$. The validity of the process is shown by the equivalences below \cite{OwenIS}
 \begin{equation}\label{equationISweights}
 \begin{aligned}
 E_{g}(\frac{f(\theta)p(\theta)}{g(\Theta)})=\int_{\mathbf{Q}} \frac{f(\theta)p(\theta)}{g(\theta)}g(\theta) d\theta=\int_{\mathbf{Q}} f(\theta)p(\theta) d\theta \\
@@ -120,7 +120,7 @@ E_{g}(\frac{f(\theta)p(\theta)}{g(\Theta)})=\int_{\mathbf{Q}} \frac{f(\theta)p(\
 The last equality comes from $p(\theta)=0 \text{ in } \mathbf{D}^c$ and $f(\theta)=0 \text{ in } \mathbf{Q}^c$.
 Therefore the importance sampling estimate becomes
 \begin{equation}\label{approximatedmeanIS}
-\hat{\mu}=\frac{1}{N}\sum_{i=1}^{N}\frac{p(\theta_{i})}{g(\theta_{i})}f(\theta_{i}) =\frac{1}{N}\sum_{i=1}^{N}w(\theta_{i})f(\theta_{i}) \text{, } \theta \sim g
+\hat{\mu}=\frac{1}{N}\sum_{i=1}^{N}\frac{p(\theta_{i})}{g(\theta_{i})}f(\theta_{i}) =\frac{1}{N}\sum_{i=1}^{N}w(\theta_{i})f(\theta_{i}) \text{, } \theta_i \sim g
 \end{equation}
 Where, in equation \eqref{approximatedmeanIS}, the so-called weights are defined as follows
 \begin{equation}\label{weightseqn_f_on_g}
@@ -131,7 +131,7 @@ Therefore, we can sample $\theta_1,\theta_2,...,\theta_N$ independently from the
 \begin{equation}\label{approximatedmeanIS2}
 \hat{\mu}=\frac{1}{N}\sum_{i=1}^{N}w(\theta_{i})f(\theta_{i}) \xrightarrow[N \to \infty]{a.s.} E_{p}(f(\theta))
 \end{equation}
-Similarly to equation \eqref{unbiased_p} (see also \cite{mcmcnotes} and \cite{OwenIS}), it is easy to demonstrate that $\mu$ of equation \eqref{approximatedmeanIS} is an unbiased estimator of the mean, i.e. that
+Similarly to equation \eqref{unbiased_p} (see also \cite{mcmcnotes} and \cite{OwenIS}), it is easy to demonstrate that $\hat{\mu}$ of equation \eqref{approximatedmeanIS} is an unbiased estimator of the mean, i.e. that
 \begin{equation}
 E_g(\hat{\mu})=\mu
 \end{equation}
@@ -158,7 +158,7 @@ We can use IS to estimate the normalising constant by considering that, from equ
 \begin{equation}\label{estimateZ}
 E_{g}(w(\theta))=\int \frac{p(\theta)}{g(\theta)}g(\theta) d\theta= \int p(\theta) d\theta=Z
 \end{equation}
-Therefore using again formulas of \eqref{approximatedmeanIS} and \eqref{approximatedmeanIS2} applied to equation \eqref{estimateZ}, we have that
+Therefore using again formulae of \eqref{approximatedmeanIS} and \eqref{approximatedmeanIS2} applied to equation \eqref{estimateZ}, we have that
 \begin{equation}\label{approxZeqn}
 \hat{Z}=\frac{1}{N}\sum_{i=1}^{N}w_{i}
 \end{equation}
@@ -170,7 +170,7 @@ The normalised weights of equation \eqref{selfnormalizedmean} are such that
 \begin{equation}\label{selfnormalizedweight}
 \hat{w}_{i}=\frac{w_{i}}{\sum_{j=1}^{N}w_{j}}
 \end{equation}
-Formula  \eqref{selfnormalizedmean} is the "self normalised" version of equations \eqref{approximatedmeanIS} and \eqref{approximatedmeanIS2}, with the property that the weights $\hat{w}^{i}$ of equation  \eqref{selfnormalizedmean} add up to 1 (as seen from \eqref{estimateZ} and \eqref{approxZeqn}, this means that we are simulating drawing from normalised distributions). It is not difficult to show that (see for example \cite{mcmcnotes}) 
+Formula  \eqref{selfnormalizedmean} is the "self normalised" version of equations \eqref{approximatedmeanIS} and \eqref{approximatedmeanIS2}, with the property that the weights $\hat{w}_{i}$ of equation  \eqref{selfnormalizedmean} add up to 1 (as seen from \eqref{estimateZ} and \eqref{approxZeqn}, this means that we are simulating drawing from normalised distributions). It is not difficult to show that (see for example \cite{mcmcnotes}) 
 \begin{equation}\label{muselfnormalised}
 E_g(\hat{\mu})=\mu+\frac{\mu Var_g(w(\theta))−Cov_g(w(\theta),w(\theta)·f(\theta))}{N} +O(N^{−2})
 \end{equation}
@@ -214,7 +214,7 @@ Where Z is the normalising constant expressed in \eqref{normalisingConst}. It is
 Where, in \eqref{finalESS}, in the first equation the $w^{(j)}$ are unnormalised weights of equation \eqref{weightseqn_f_on_g}, whereas in the second equation the $\bar{w}^{(j)}$ are the self-normalised weights of equation \eqref{selfnormalizedweight}.
 
 \section{Markov Chain Monte Carlo (MCMC)}\label{section: mcmc}
-We will introduce in this section Markov Chains Monte Carlo (MCMC). Like the Monte Carlo methods in previous sections, MCMC provides an indirect way to approximate drawing samples from a distribution that we cannot directly draw from. Unlike the traditional MC and Importance Sampling, MCMC samples are not independently distributed: as we can see from equation \eqref{markovianity} in fact, there is conditional dependence between values. A stochastic process is defined Markov Chain Monte Carlo if, considering $X_1, X_2, ...X_N$ random variables defined on a common probability space $\big(\chi, \mathcal{A}, P\big)$, that are the realization of the process, it has the following so-called Markov property:
+We will introduce in this section Markov Chains Monte Carlo (MCMC). Like the Monte Carlo methods in previous sections, MCMC provides a way to approximate drawing samples from a distribution that we cannot directly draw from. Unlike the traditional MC and Importance Sampling, MCMC samples are not independently distributed: as we can see from equation \eqref{markovianity} in fact, there is conditional dependence between values. A stochastic process is defined Markov Chain Monte Carlo if, considering $X_1, X_2, ...X_N$ random variables defined on a common probability space $\big(\chi, \mathcal{A}, P\big)$, that are the realization of the process, it has the following so-called Markov property:
 \begin{equation}\label{markovianity}
 P(X^{(t)}=x^{(t)}|X^{(t-1)}=x^{(t-1)},...,X^{(1)}=x^{(1)})=P(X^{(t)}=x^{(t)}|X^{(t-1)}=x^{(t-1)})
 \end{equation}
@@ -231,7 +231,7 @@ The kernel is a conditional probability density, we will speak more extensively 
 \begin{equation}\label{MarkovKernelContinuous}
 P(X_t \in B_i|X_{t-1}=x_{t-1})=\int_{B_i}k(x_{t-1},x_t)dx_t
 \end{equation}
-whereas in the discrete case we have
+and in the discrete case equation \eqref{MarkovKernelContinuous} becomes
 \begin{equation}\label{MarkovKernelDiscrete}
 P(X_t \in B_i|X_{t-1}=x_{t-1}) = \sum_{x'\in B_i} k(x_{t-1},x')
 \end{equation}
@@ -241,22 +241,18 @@ The chain $X_n$ is defined for $n \in \mathbb{N}$, therefore there is a $X_0$, s
 \begin{equation}\label{distribX0}
 P(X_0 \in A)=\int_A \mu(x) dx
 \end{equation}
-And, consequently
-\begin{equation}
-P(X_0=x_0)=\mu(x_0)
-\end{equation}
-The extension to the discrete case of \eqref{distribX0} is similar to formula \eqref{MarkovKernelDiscrete}, we have in fact
+The obvious extension to the discrete case of \eqref{distribX0} is similar to formula \eqref{MarkovKernelDiscrete}, we have in fact
 \begin{equation}\label{distribX0discrete}
 P(X_0 \in A)=\sum_{x_{0i} \in A } \mu(x_{0i}) 
 \end{equation}
 
 
 \subsection{Joint and conditional distributions of the $X_i$}
-Continuing what we have said in the previous section \ref{subsectionX0distrib}, the marginal distribution of $X_1$ is obtained by  $\mu_1(x_1)=\mu(x_0)k(x_0,x_1)$, and consequently \cite{RobertCasella} 
+Continuing what we have said in the previous section \ref{subsectionX0distrib}, the marginal distribution of $X_1$ is obtained by  $\mu_1(x_1)=\mu(x_0)k(x_0,x_1)$, and therefore \cite{RobertCasella} 
 \begin{equation}
 P(X_1 \in A|X_0=x_0)=\int_A \mu(x_0)k(x_0,x_1) dx_1
 \end{equation}
-and, finally
+and, de-marginalising wrt $x_0$ we obtain the joint distribution
 \begin{equation}
 P(X_1 \in A_1, X_0 \in A_0)=\int_{A_0} \int_{A_1} \mu(x_0)k(x_0,x_1) dx_0dx_1
 \end{equation}
@@ -332,13 +328,13 @@ It can be demonstrated \cite{mcmcnotes} \cite {RobertCasella} that the kernel \e
 \section{Annealed Importance Sampling (AIS)}\label{section: AIS}
 We will, in this section, introduce a Monte Carlo method named \textbf{Annealed importance Sampling (AIS)}. Like the other methods introduced so far, the AIS is used to approximating drawing from a target distribution, in particular the AIS can be seen as an enhancement \cite{annealedis} to the Importance Sampling and MCMC tecniques introduced in sections \ref{section:IS} and \ref{section: mcmc}, and we will see later in this section that it combines the two (MCMC and IS). Annealed Importance Sampling allows us to move from an initial tractable distribution to a target distribution of interest, which is intractable or difficult to draw from.
 \subsubsection{Annealed Importance Sampling vs Importance Sampling}
-We have seen in section \ref{section:IS} that an important measure for IS is the Effective Sample Size (ESS), a quantity that provides us with a measure of how close the IS process is to an ideal situation where we can draw directly from the target distribution. Studies have shown that, in some reference scenarios \cite{IS_cost}, the number of Importance samples N has to be increased exponentially as the dimension of the state space increases, to keep the ESS at a predefined level. Therefore the approximation of the target given by the IS method in general deteriorates exponentially with the dimension. It has to be noted that the "curse of dimensionality" for IS, does not always automatically happen \cite{IS_cost}, as there may be cases where there is a diminishing response of the likelihood to perturbations in growing coordinate index, and in such case increasing the state space dimension has only a mild effect in the cost of the problem. Also, a relatively recent field of study focuses on \textit{active subspaces} \cite{IS_cost}: 
+We have seen in section \ref{section:IS} that an important measure for IS is the Effective Sample Size (ESS), a quantity that provides us with a measure of how close the IS process is to an ideal situation where we can draw directly from the target distribution. It has been shown that, in some reference scenarios \cite{IS_cost}, the number of Importance samples N has to be increased exponentially as the dimension of the state space increases, to keep the ESS at a predefined level. Therefore the approximation of the target given by the IS method in general deteriorates exponentially with the dimension. It has to be noted that the "curse of dimensionality" for IS, does not always automatically happen \cite{IS_cost}, as there may be cases where there is a diminishing response of the likelihood to perturbations in growing coordinate index, and in such case increasing the state space dimension has only a mild effect in the cost of the problem. Also, a relatively recent field of study focuses on \textit{active subspaces} \cite{IS_cost}: 
  in many application areas where models are formulated in high dimensional state spaces, there is often a small subspace which captures most of the features of the system. It is the dimension of this subspace that mainly affects the cost of the problem, and in presence of these active subspaces, we expect as well that the number of particles to keep a predetermined ESS will be given mainly by the dimensionality of the subspace, which is relatively constant, and will not therefore be subject to the curse of dimensionality.
 
 Aside from the particular cases, IS is therefore affected negatively (at an exponential rate) by high dimensions. In contrast, it has been shown that \cite{crisan1} \cite{crisan2} sequential Monte Carlo methods like AIS and Sequential Monte Carlo (SMC, introduced later in this section), scale polynomially as the dimension $d$ of the state space grows large. In particular it has been shown \cite{crisan1} \cite{crisan2} that it is possible to find an approximation s.t. the ESS remains at a predermined level at a cost $O(Nd^2)$, where $N$ is the number of particles and $d$ the dimension of the state space. In addition, it is possible to approximate expectations wrt any marginal, at the cost, uniformly in $d$, of $\frac{1}{\sqrt{N}}$ \cite{crisan1} \cite{crisan2}.
 
 \subsubsection{Annealed Importance Sampling vs MCMC}
-AIS is most useful in cases of isolated modes, it works better, in general, that IS because for importance sampling to work well the variance of the weights should not vary too much, and, in case of isolated modes, some of the samples can different modes, which will be assigned different weights and the variation in weights due to this will be large if some important modes are found only rarely. AIS will also in general work better than MCMC in case of isolated modes, in fact when MCMC is used to sample from complex distributions it must usually proceed by making only small changes to the state variables \cite{annealedis}, and this causes the chain to move between modes only rarely, and so to take a long time to reach equilibrium, and will exhibit high autocorrelations for functions of the state variables out to long time lags. The AIS, allowing to gradually approach the desired distribution of interest by making use of interpolating distributions, is an approach to avoid this.
+AIS is most useful in cases of isolated modes, it works better, in general, than IS because for importance sampling to work well the variance of the weights should not vary too much, and, in case of isolated modes, some of the samples can different modes, which will be assigned different weights and the variation in weights due to this will be large if some important modes are found only rarely. AIS will also in general work better than MCMC in case of isolated modes, in fact when MCMC is used to sample from complex distributions it must usually proceed by making only small changes to the state variables \cite{annealedis}, and this causes the chain to move between modes only rarely, and so to take a long time to reach equilibrium, and will exhibit high autocorrelations for functions of the state variables out to long time lags. The AIS, allowing to gradually approach the desired distribution of interest by making use of interpolating distributions, is an approach to avoid this.
 
 \subsubsection{The AIS algorithm}
 We proceed with the description of the algorithm. We state again that the aim of the AIS algorithm \cite{annealedis} is, as all other Monte Carlo methods, to approximate the drawing of samples from a target distribution of interest: let's call this normalised target distribution $p_n$, and $f_n$ the associated un-normalised version (in the rest of the section we will use either or both $p$ and $f$ with indexes e.g. $p_j$ and $f_j$ for normalised and un-normalised distributions). AIS makes use of the methods of IS and MCMC, in fact it will use intermediate proposal distributions to draw from, and will make use of MCMC to move between the intermediate steps. The algorithm starts by sampling from an initial proposal distribution that we call $f_0$ (or a said $p_0$), often a candidate for this proposal is the prior \cite{annealedis}. As said, the AIS moves from the initial distribution to the target $f_n$ with intermediate target distributions $f_j$
@@ -411,10 +407,10 @@ Since, as we saw in the steps of \eqref{AISalgorithmSteps}, at each step $x_j \s
 \section{Sequential Monte Carlo (SMC)}\label{section: SMC}
 \textbf{Sequential Monte Carlo (SMC)} methods are a collection of techniques used to approximate a target distribution.
 \subsubsection{SMC vs AIS}
-Like the AIS methods described in section \ref{section: AIS}, SMC uses IS and a sequence of proposals to approximate intermediate target functions, with the aim to create a set of particles that approximate a distribution of interest, not easy to draw from. A difference of SMC wrt AIS lies in that SMC uses a technique called \textit{resampling} to account for the fact that the variance of the particles weights usually increases with (algorithmic) time (in fact the AIS is a subcase of the SMC where we employ no resampling). A measure of the variability of weights commonly used is the ESS, as introduced already in sections \ref{section:IS} and \ref{section: AIS}. The resampling is a sampling with replacement from the current sample of particles using the weights and resetting them to 1/N afterwards (therefore if, for example, before the resampling a particle has a normalised weight twice as big as the others, it has twice as much chance than the others to "survive" the resampling process, and also to be "copied", i.e. resampled, into one or more new particles that will be a copy of it, whereas particles with little weight, and therefore little representative of the target, are more likely to be eliminated). A technique usually employed is to resample when the ESS drops below a given threshold (for example if the threshold is, say, 0.9, when the effective sample size drops below 90\% of the number of particles $N$ the resampling happens) \cite{crisan1}.
+Like the AIS methods described in section \ref{section: AIS}, SMC uses IS and a sequence of proposals to approximate intermediate target functions, with the aim to create a set of particles that approximate a distribution of interest, not easy to draw from. A difference of SMC wrt AIS lies in that SMC uses a technique called \textit{resampling} to account for the fact that the variance of the particles weights usually increases with (algorithmic) time (in fact the AIS is a subcase of the SMC where we employ no resampling). A measure of the variability of weights commonly used is the ESS, as introduced already in sections \ref{section:IS} and \ref{section: AIS}. The resampling is a sampling with replacement from the current sample of particles using the weights and resetting them to 1/N afterwards (therefore if, for example, before the resampling a particle has a normalised weight twice as big as the others, it has twice as much chance than the others to "survive" the resampling process, and also to be "copied", i.e. resampled, into one or more new particles that will be a copy of it, whereas particles with little weight, and therefore little representative of the target, are more likely to be eliminated). A technique usually employed is to resample when the ESS drops below a given threshold (for example if the threshold is, say, 0.9, when the effective sample size drops below 90\% of the number of particles $N$ the resampling happens) \cite{sequentialmcsamplersdelmoral} \cite{crisan1}.
 
 \subsubsection{The SMC algorithm}
-As said in the introduction, the \textbf{Sequential Monte Carlo (SMC)} algorithm will have many commonalities with the AIS seen in section \ref{section: AIS}. We will, similarly to section \ref{section: AIS}, make use of consecutive "neighbouring" distributions, i.e. distributions that are not too different one from another so that the proposals and the target distributions, at each step, are sufficiently close. The starting point is, as in the common Monte Carlo methods, that we are willing to draw samples from a target distribution $\pi_n$. We proceed through intermediate targets as in equation \eqref{fjAIS}, and at each step the previous target become the proposal for the next target. We proceed in steps, similar to \eqref{AISalgorithmSteps}, we start by drawing from an initial distribution $pi_0$ easy to draw from, it can for example be the prior (in which case the expressions simplify as in equations \eqref{f0explained} and \eqref{fjsimplified}), and we go on constructing the first steps as done in \eqref{AISalgorithmSteps}. We present here the SMC version that makes use of resampling of the particles, we will explain further in the section what this implies. The steps of the SMC algorithm follow:
+As said in the introduction, the \textbf{Sequential Monte Carlo (SMC)} algorithm will have many commonalities with the AIS seen in section \ref{section: AIS}. We will, similarly to section \ref{section: AIS}, make use of consecutive "neighbouring" distributions, i.e. distributions that are not too different one from another so that the proposals and the target distributions, at each step, are sufficiently close. The starting point is, as in the common Monte Carlo methods, that we are willing to draw samples from a target distribution $\pi_n$. We proceed through intermediate targets as in equation \eqref{fjAIS}, and at each step the previous target become the proposal for the next target. We proceed in steps, similar to \eqref{AISalgorithmSteps}, we start by drawing from an initial distribution $pi_0$ easy to draw from, it can for example be the prior (in which case the expressions simplify as in equations \eqref{f0explained} and \eqref{fjsimplified}), and we go on constructing the first steps as done in \eqref{AISalgorithmSteps}. We present here the SMC version that makes use of resampling of the particles, we will explain further in the section what this implies. The steps of the SMC algorithm follow \cite{sequentialmcsamplersdelmoral}:
 \begin{equation}\label{SMCalgorithmSteps1}
 \begin{aligned}
 \text{step 0)}  \text{ }x_{0}\sim p_{0} \\
@@ -452,6 +448,15 @@ By repeating the steps outlined above, we can normalise the weights of \eqref{we
 \begin{equation}\label{weightsSecondStepSMC}
 w^{(i)}_2=w^{(i)}_1\frac{p_2(x_1)}{p_1(x_1)}
 \end{equation}
+And so, in general, the un-normalised weight update component at each step is
+\begin{equation}\label{smcPartialWeightUpdate}
+	w^{(i)}_j=\frac{p_j(x_{j-1})}{p_{j-1}(x_{j-1})}
+\end{equation}
+and so, the full equation of the un-normalised weight update becomes:
+\begin{equation}\label{smcPartialWeightUpdate}
+	w^{(i)}_j=\frac{p_j(x_{j-1})}{p_{j-1}(x_{j-1})}...\frac{p_2(x_{1})}{p_{1}(x_{1})}\frac{p_1(x_{0})}{p_{0}(x_{0})}w^{(i)}_0
+\end{equation}
+
 
 \section{Models of genetic evolution}\label{section: models of genetic evolution}
 The main goal of population genetics and of phylogenesis (we explain the differences of the two in section \ref{section: genetics vs phylogenesis}) is to infer the past history of populations and describe the evolutionary forces that have shaped their genetic variations. The current section will give a very brief and schematic explanation of the forces behind evolution.
@@ -666,6 +671,7 @@ where, in equation \eqref{generalcoalescent}, the $k_i$ express the number of di
 	\bibitem{crisan1} Error Bounds and Normalizing Constants for Sequential Monte Carlo in
 	High Dimensions. Beskos, Alexandros , Crisan, Dan ,  Jasra, Ajay , Whiteley, Nick. (2011)
 	\bibitem{crisan2} On the stability of sequential Monte Carlo methods in high dimensions. Beskos, A., Crisan, D., Jasra, A. Ann. Appl. Probab. 24 (2014), no. 4, 1396--1445. doi:10.1214/13-AAP951
+	\bibitem{sequentialmcsamplersdelmoral} Sequential monte carlo samplers. Del Moral, P., Doucet, A. (2003), Condensed Matter (cond-mat) CUED-F-INFENG-443,	arXiv:cond-mat/0212648
 
 \end{thebibliography}
 
